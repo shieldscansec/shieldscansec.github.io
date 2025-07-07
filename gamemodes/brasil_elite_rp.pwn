@@ -31,6 +31,7 @@
 #include <a_samp>
 #include <a_mysql>
 #include <sscanf2>
+#undef MAX_OBJECTS
 #include <streamer>
 #include <zcmd>
 
@@ -222,12 +223,14 @@ new PlayerText:PTDLogin_BemVindo[MAX_PLAYERS];
 new PlayerText:PTDLogin_Input[MAX_PLAYERS];
 new PlayerText:PTDLogin_Botao[MAX_PLAYERS];
 
-// ==================== ITERADORES ====================
-new Iterator:Players<MAX_PLAYERS>;
-new Iterator:Houses<MAX_HOUSES>;
-new Iterator:Vehicles<MAX_VEHICLES_SERVER>;
-new Iterator:Factions<MAX_FACTIONS>;
-new Iterator:Jobs<MAX_JOBS>;
+// ==================== VARIÁVEIS DE CONTROLE ====================
+new bool:PlayerOnline[MAX_PLAYERS];
+new TotalPlayers;
+
+// ==================== FORWARDS NECESSÁRIOS ====================
+forward VerificarPlayer(playerid);
+forward OnHousesLoaded();
+forward OnVehiclesLoaded();
 
 // ==================== VARIÁVEIS ANTI-CHEAT ====================
 new PlayerMoneyCheck[MAX_PLAYERS];
@@ -240,8 +243,6 @@ forward OnPlayerLogin(playerid);
 forward OnPlayerRegister(playerid);
 forward AtualizarServidor();
 forward AntiCheatTimer();
-forward OnHousesLoaded();
-forward OnVehiclesLoaded();
 forward KickPlayerDelayed(playerid);
 
 // ==================== MAIN ====================
@@ -261,9 +262,9 @@ public OnGameModeInit()
 {
     // Configurações básicas do servidor
     SetGameModeText("Brasil Elite RP v2.0");
-    SendRconCommand("hostname "SERVIDOR_NOME" - "SERVIDOR_VERSAO);
+    SendRconCommand("hostname [BR] Brasil Elite RP v2.0 - LemeHost Edition");
     SendRconCommand("mapname Brasil - Rio de Janeiro");
-    SendRconCommand("weburl "SERVIDOR_SITE);
+    SendRconCommand("weburl discord.gg/brasielite");
     SendRconCommand("language Português");
     
     // Configurações gerais
@@ -312,9 +313,9 @@ public OnGameModeInit()
 public OnGameModeExit()
 {
     // Salvar todos os players online
-    foreach(new i : Players)
+    for(new i = 0; i < MAX_PLAYERS; i++)
     {
-        if(PlayerInfo[i][pLogado])
+        if(PlayerOnline[i] && PlayerInfo[i][pLogado])
         {
             SalvarPlayer(i);
         }
@@ -330,8 +331,9 @@ public OnGameModeExit()
 // ==================== PLAYER CONNECT ====================
 public OnPlayerConnect(playerid)
 {
-    // Adicionar ao iterator
-    Iter_Add(Players, playerid);
+    // Marcar player como online
+    PlayerOnline[playerid] = true;
+    TotalPlayers++;
     
     // Resetar variáveis
     ResetarVariaveisPlayer(playerid);
@@ -355,12 +357,12 @@ public OnPlayerConnect(playerid)
     // Mensagens de boas-vindas
     new string[256];
     format(string, sizeof(string), 
-        "🎮 {FFFFFF}Bem-vindo ao {FFD700}%s{FFFFFF}, {00FF7F}%s{FFFFFF}!", 
-        SERVIDOR_NOME, PlayerInfo[playerid][pNome]);
+        "🎮 {FFFFFF}Bem-vindo ao {FFD700}Brasil Elite RP{FFFFFF}, {00FF7F}%s{FFFFFF}!", 
+        PlayerInfo[playerid][pNome]);
     SendClientMessage(playerid, COR_VERDE_ELITE, string);
     
     SendClientMessage(playerid, COR_INFO, "📋 Digite {FFFF00}/comandos {87CEEB}para ver todos os comandos disponíveis.");
-    SendClientMessage(playerid, COR_INFO, "💬 Discord: {FFFF00}"SERVIDOR_SITE);
+    SendClientMessage(playerid, COR_INFO, "💬 Discord: {FFFF00}discord.gg/brasielite");
     
     printf("👤 %s conectou ao servidor (ID: %d)", PlayerInfo[playerid][pNome], playerid);
     
@@ -373,14 +375,15 @@ public OnPlayerDisconnect(playerid, reason)
     // Salvar dados se estiver logado
     if(PlayerInfo[playerid][pLogado])
     {
-        SalvarPlayer(i);
+        SalvarPlayer(playerid);
     }
     
     // Destruir textdraws
     DestruirTextdrawsPlayer(playerid);
     
-    // Remover do iterator
-    Iter_Remove(Players, playerid);
+    // Marcar player como offline
+    PlayerOnline[playerid] = false;
+    TotalPlayers--;
     
     // Mensagem de saída
     new string[128], motivo[32];
@@ -435,7 +438,9 @@ public OnPlayerSpawn(playerid)
     
     // Atualizar anti-cheat
     PlayerMoneyCheck[playerid] = GetPlayerMoney(playerid);
-    GetPlayerHealth(playerid, Float:PlayerHealthCheck[playerid]);
+    new Float:tempHealth;
+    GetPlayerHealth(playerid, tempHealth);
+    PlayerHealthCheck[playerid] = floatround(tempHealth);
     
     printf("🎯 %s spawnou no servidor", PlayerInfo[playerid][pNome]);
     
@@ -654,9 +659,9 @@ public AtualizarServidor()
     }
     
     // Atualizar todos os players
-    foreach(new i : Players)
+    for(new i = 0; i < MAX_PLAYERS; i++)
     {
-        if(PlayerInfo[i][pLogado])
+        if(PlayerOnline[i] && PlayerInfo[i][pLogado])
         {
             AtualizarStatusPlayer(i);
             AtualizarHUDPlayer(i);
@@ -668,9 +673,9 @@ public AtualizarServidor()
 
 public AntiCheatTimer()
 {
-    foreach(new i : Players)
+    for(new i = 0; i < MAX_PLAYERS; i++)
     {
-        if(PlayerInfo[i][pLogado])
+        if(PlayerOnline[i] && PlayerInfo[i][pLogado])
         {
             DetectarAntiCheat(i);
         }
@@ -839,13 +844,16 @@ stock SendLocalMessage(playerid, const message[], Float:radius)
     new Float:x, Float:y, Float:z;
     GetPlayerPos(playerid, x, y, z);
     
-    foreach(new i : Players)
+    for(new i = 0; i < MAX_PLAYERS; i++)
     {
-        if(GetPlayerDistanceFromPoint(i, x, y, z) <= radius)
+        if(PlayerOnline[i])
         {
-            if(GetPlayerVirtualWorld(i) == GetPlayerVirtualWorld(playerid))
+            if(GetPlayerDistanceFromPoint(i, x, y, z) <= radius)
             {
-                SendClientMessage(i, COR_CHAT_LOCAL, message);
+                if(GetPlayerVirtualWorld(i) == GetPlayerVirtualWorld(playerid))
+                {
+                    SendClientMessage(i, COR_CHAT_LOCAL, message);
+                }
             }
         }
     }
@@ -1729,7 +1737,7 @@ CMD:comandos(playerid, params[])
 CMD:q(playerid, params[])
 {
     SendClientMessage(playerid, COR_VERDE_ELITE, "👋 Obrigado por jogar no Brasil Elite RP!");
-    SendClientMessage(playerid, COR_INFO, "💬 Discord: "SERVIDOR_SITE);
+    SendClientMessage(playerid, COR_INFO, "💬 Discord: discord.gg/brasielite");
     
     if(PlayerInfo[playerid][pLogado])
     {
