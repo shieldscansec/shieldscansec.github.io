@@ -20,6 +20,7 @@
 
 #include <a_samp>
 #include <a_mysql>
+#define SSCANF_NO_NICE_FEATURES
 #include <sscanf2>
 #include <streamer>
 #include <zcmd>
