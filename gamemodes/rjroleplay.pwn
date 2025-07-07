@@ -68,18 +68,26 @@
 // Dialogs
 #define DIALOG_LOGIN 100
 #define DIALOG_REGISTER 101
-#define DIALOG_GPS 102
-#define DIALOG_HELP 103
-#define DIALOG_JOB_AGENCY 104
-#define DIALOG_CITY_HALL 105
+#define DIALOG_EMAIL_CONFIRM 102
+#define DIALOG_GPS 103
+#define DIALOG_HELP 104
+#define DIALOG_JOB_AGENCY 105
+#define DIALOG_CITY_HALL 106
+
+// Login/Register TextDraw IDs
+#define MAX_LOGIN_TEXTDRAWS 25
 
 // GPS Locations
-#define GPS_DELEGACIA 0
-#define GPS_PREFEITURA 1
-#define GPS_AGENCIA_EMPREGO 2
-#define GPS_HOSPITAL 3
-#define GPS_BANCO 4
-#define GPS_AEROPORTO 5
+#define GPS_AEROPORTO 0
+#define GPS_DELEGACIA 1
+#define GPS_PREFEITURA 2
+#define GPS_AGENCIA_EMPREGO 3
+#define GPS_HOSPITAL 4
+#define GPS_BANCO 5
+#define GPS_CRISTO_REDENTOR 6
+#define GPS_PAO_ACUCAR 7
+#define GPS_COPACABANA 8
+#define GPS_MARACANA 9
 
 // =============================================================================
 // BASIC ENUMERATORS
@@ -114,11 +122,14 @@ enum PlayerInfo {
     pJob,
     pJobLevel,
     pBankMoney,
+    pEmail[64],
+    pRegistrationStep,
+    pLoginAttempts,
     
-    // Login TextDraws
-    Text:pLoginBG,
-    Text:pLoginTitle,
-    Text:pLoginText,
+    // Modern Login/Register TextDraws
+    Text:pLoginTD[MAX_LOGIN_TEXTDRAWS],
+    bool:pLoginScreenActive,
+    bool:pRegisterMode,
     
     // GPS
     pGPSActive,
@@ -147,12 +158,16 @@ new gPlayersOnline;
 
 // GPS System
 new gGPSLocations[][GPSInfo] = {
-    {"Delegacia Central", 1554.6, -1675.6, 16.2, 0, "Delegacia modificada - PCERJ"},
-    {"Prefeitura Municipal", 1481.0, -1772.3, 18.8, 0, "Prefeitura do Rio de Janeiro"},
-    {"Agência de Emprego", 1368.4, -1279.8, 13.5, 0, "Centro de Empregos - Sine RJ"},
-    {"Hospital Albert Schweitzer", 2034.4, -1401.6, 17.3, 0, "Hospital público"},
-    {"Banco Central", 1462.3, -1011.4, 26.8, 0, "Banco do Brasil"},
-    {"Aeroporto Internacional", 1680.3, -2324.8, 13.5, 0, "Aeroporto do Galeão"}
+    {"Aeroporto Internacional Tom Jobim", 1680.0, -2310.0, 13.5, 0, "Aeroporto do Galeão - Terminal Principal"},
+    {"Delegacia Central PCERJ", 1554.6, -1675.6, 16.2, 0, "Polícia Civil do Estado do Rio de Janeiro"},
+    {"Prefeitura Municipal", 1481.0, -1772.3, 18.8, 0, "Prefeitura da Cidade do Rio de Janeiro"},
+    {"Agência SINE-RJ", 1368.4, -1279.8, 13.5, 0, "Sistema Nacional de Emprego - Rio de Janeiro"},
+    {"Hospital Albert Schweitzer", 2034.4, -1401.6, 17.3, 0, "Hospital Público de Emergência"},
+    {"Banco Central do Brasil", 1462.3, -1011.4, 26.8, 0, "Agência Bancária Principal"},
+    {"Cristo Redentor", -2026.0, -1634.0, 140.0, 0, "Cartão postal - Corcovado"},
+    {"Pão de Açúcar", -1300.0, -750.0, 80.0, 0, "Bondinho do Pão de Açúcar"},
+    {"Praia de Copacabana", -1810.0, -590.0, 12.0, 0, "Praia mais famosa do Rio"},
+    {"Estádio do Maracanã", -1680.0, 1000.0, 15.0, 0, "Templo do futebol mundial"}
 };
 
 // Job System
@@ -193,29 +208,142 @@ public OnGameModeInit() {
     SetTimer("UpdateServer", 1000, true);
     SetTimer("UpdateGPS", 2000, true);
     
-    // Mapeamento da Delegacia (modificada)
-    CreateObject(1280, 1568.8, -1675.2, 15.2, 0.0, 0.0, 0.0); // Entrada delegacia
-    CreateObject(1280, 1548.1, -1675.2, 15.2, 0.0, 0.0, 180.0); // Saída delegacia
+    // ========== AEROPORTO INTERNACIONAL TOM JOBIM (GALEÃO) ==========
+    print("✓ Carregando Aeroporto Internacional Tom Jobim (Galeão)...");
+    
+    // Terminal Principal
+    CreateObject(8340, 1680.0, -2324.0, 20.0, 0.0, 0.0, 0.0); // Prédio principal do terminal
+    CreateObject(8341, 1720.0, -2324.0, 18.0, 0.0, 0.0, 90.0); // Extensão do terminal
+    CreateObject(8342, 1640.0, -2324.0, 18.0, 0.0, 0.0, 270.0); // Ala oeste
+    
+    // Torre de Controle
+    CreateObject(1697, 1700.0, -2280.0, 13.5, 0.0, 0.0, 0.0); // Torre de controle
+    CreateObject(1297, 1700.0, -2280.0, 35.0, 0.0, 0.0, 0.0); // Antenas no topo
+    
+    // Pistas de Pouso
+    CreateObject(3095, 1500.0, -2324.0, 13.0, 0.0, 0.0, 90.0); // Pista principal
+    CreateObject(3095, 1400.0, -2324.0, 13.0, 0.0, 0.0, 90.0); // Extensão pista
+    CreateObject(3095, 1300.0, -2324.0, 13.0, 0.0, 0.0, 90.0); // Extensão pista
+    CreateObject(3095, 1200.0, -2324.0, 13.0, 0.0, 0.0, 90.0); // Extensão pista
+    
+    // Pista Secundária
+    CreateObject(3095, 1680.0, -2200.0, 13.0, 0.0, 0.0, 0.0); // Pista secundária
+    CreateObject(3095, 1680.0, -2100.0, 13.0, 0.0, 0.0, 0.0); // Extensão
+    
+    // Hangares
+    CreateObject(3267, 1800.0, -2300.0, 13.5, 0.0, 0.0, 0.0); // Hangar 1
+    CreateObject(3267, 1850.0, -2300.0, 13.5, 0.0, 0.0, 0.0); // Hangar 2
+    CreateObject(3267, 1900.0, -2300.0, 13.5, 0.0, 0.0, 0.0); // Hangar 3
+    CreateObject(3267, 1800.0, -2350.0, 13.5, 0.0, 0.0, 0.0); // Hangar 4
+    
+    // Estacionamento Multi-Level
+    CreateObject(4000, 1620.0, -2280.0, 13.5, 0.0, 0.0, 0.0); // Estrutura estacionamento
+    CreateObject(4000, 1620.0, -2280.0, 18.5, 0.0, 0.0, 0.0); // 2º andar
+    CreateObject(4000, 1620.0, -2280.0, 23.5, 0.0, 0.0, 0.0); // 3º andar
+    
+    // Sinalizações do Aeroporto
+    CreateObject(3472, 1680.0, -2340.0, 16.0, 0.0, 0.0, 0.0); // Placa "Aeroporto Internacional Tom Jobim"
+    CreateObject(3472, 1650.0, -2310.0, 16.0, 0.0, 0.0, 90.0); // Placa "Terminal 1"
+    CreateObject(3472, 1710.0, -2310.0, 16.0, 0.0, 0.0, 90.0); // Placa "Terminal 2"
+    CreateObject(3472, 1680.0, -2290.0, 16.0, 0.0, 0.0, 0.0); // Placa "Embarque/Desembarque"
+    
+    // Sistema de Iluminação
+    CreateObject(1226, 1660.0, -2324.0, 13.5, 0.0, 0.0, 0.0); // Poste de luz
+    CreateObject(1226, 1700.0, -2324.0, 13.5, 0.0, 0.0, 0.0); // Poste de luz
+    CreateObject(1226, 1740.0, -2324.0, 13.5, 0.0, 0.0, 0.0); // Poste de luz
+    CreateObject(1226, 1680.0, -2304.0, 13.5, 0.0, 0.0, 0.0); // Poste de luz
+    CreateObject(1226, 1680.0, -2344.0, 13.5, 0.0, 0.0, 0.0); // Poste de luz
+    
+    // Aviões Estacionados
+    CreateObject(577, 1750.0, -2350.0, 13.5, 0.0, 0.0, 180.0); // AT-400 (Avião comercial)
+    CreateObject(577, 1820.0, -2320.0, 13.5, 0.0, 0.0, 270.0); // AT-400
+    CreateObject(519, 1880.0, -2280.0, 13.5, 0.0, 0.0, 90.0); // Shamal (Jato privado)
+    CreateObject(593, 1850.0, -2250.0, 13.5, 0.0, 0.0, 45.0); // Dodo (Avião pequeno)
+    
+    // ========== CRISTO REDENTOR (CORCOVADO) ==========
+    print("✓ Carregando Cristo Redentor...");
+    CreateObject(8838, -2026.0, -1634.0, 120.0, 0.0, 0.0, 0.0); // Base do Cristo
+    CreateObject(3851, -2026.0, -1634.0, 140.0, 0.0, 0.0, 0.0); // Estátua do Cristo
+    CreateObject(3472, -2030.0, -1640.0, 118.0, 0.0, 0.0, 0.0); // Placa turística
+    
+    // ========== PÃO DE AÇÚCAR ==========
+    print("✓ Carregando Pão de Açúcar...");
+    CreateObject(8839, -1300.0, -750.0, 80.0, 0.0, 0.0, 0.0); // Morro do Pão de Açúcar
+    CreateObject(1280, -1300.0, -745.0, 78.0, 0.0, 0.0, 0.0); // Estação do bondinho
+    
+    // ========== COPACABANA ==========
+    print("✓ Carregando Praia de Copacabana...");
+    CreateObject(615, -1800.0, -600.0, 12.0, 0.0, 0.0, 0.0); // Palmeiras
+    CreateObject(615, -1820.0, -600.0, 12.0, 0.0, 0.0, 0.0);
+    CreateObject(615, -1840.0, -600.0, 12.0, 0.0, 0.0, 0.0);
+    CreateObject(1280, -1810.0, -590.0, 12.0, 0.0, 0.0, 0.0); // Posto salva-vidas
+    
+    // ========== MARACANÃ ==========
+    print("✓ Carregando Estádio do Maracanã...");
+    CreateObject(8557, -1680.0, 1000.0, 15.0, 0.0, 0.0, 0.0); // Estádio
+    CreateObject(3472, -1680.0, 980.0, 18.0, 0.0, 0.0, 0.0); // Placa "Maracanã"
+    
+    // ========== DELEGACIA CENTRAL PCERJ ==========
+    print("✓ Carregando Delegacia Central...");
+    CreateObject(1280, 1568.8, -1675.2, 15.2, 0.0, 0.0, 0.0); // Entrada principal
+    CreateObject(1280, 1548.1, -1675.2, 15.2, 0.0, 0.0, 180.0); // Saída
     CreateObject(3472, 1554.6, -1690.0, 16.0, 0.0, 0.0, 0.0); // Placa PCERJ
+    CreateObject(3864, 1560.0, -1680.0, 15.2, 0.0, 0.0, 0.0); // Cerca de segurança
     
-    // Prefeitura (novo prédio)
-    CreateObject(4585, 1481.0, -1772.3, 25.0, 0.0, 0.0, 0.0); // Prédio prefeitura
-    CreateObject(1280, 1476.0, -1772.3, 17.8, 0.0, 0.0, 0.0); // Entrada prefeitura
-    CreateObject(3472, 1481.0, -1780.0, 20.0, 0.0, 0.0, 0.0); // Placa prefeitura
+    // ========== PREFEITURA DO RIO ==========
+    print("✓ Carregando Prefeitura Municipal...");
+    CreateObject(4585, 1481.0, -1772.3, 25.0, 0.0, 0.0, 0.0); // Prédio principal
+    CreateObject(1280, 1476.0, -1772.3, 17.8, 0.0, 0.0, 0.0); // Entrada
+    CreateObject(3472, 1481.0, -1780.0, 20.0, 0.0, 0.0, 0.0); // Placa oficial
+    CreateObject(1282, 1485.0, -1772.3, 17.8, 0.0, 0.0, 0.0); // Portão lateral
     
-    // Agência de Emprego
-    CreateObject(1280, 1368.4, -1274.8, 12.5, 0.0, 0.0, 0.0); // Entrada agência
+    // ========== AGÊNCIA DE EMPREGO SINE-RJ ==========
+    print("✓ Carregando Agência de Emprego...");
+    CreateObject(1280, 1368.4, -1274.8, 12.5, 0.0, 0.0, 0.0); // Entrada
     CreateObject(3472, 1368.4, -1285.0, 15.0, 0.0, 0.0, 0.0); // Placa SINE-RJ
+    CreateObject(1775, 1365.0, -1275.0, 13.5, 0.0, 0.0, 0.0); // Balcão atendimento
     
-    // Veículos oficiais
+    // ========== HOSPITAL ALBERT SCHWEITZER ==========
+    print("✓ Carregando Hospital...");
+    CreateObject(3864, 2034.0, -1401.0, 17.0, 0.0, 0.0, 0.0); // Cerca hospitalar
+    CreateObject(1280, 2034.4, -1396.0, 17.3, 0.0, 0.0, 0.0); // Entrada emergência
+    CreateObject(3472, 2034.4, -1410.0, 19.0, 0.0, 0.0, 0.0); // Placa hospital
+    CreateObject(416, 2040.0, -1400.0, 17.3, 0.0, 0.0, 0.0); // Ambulância
+    
+    // ========== BANCO CENTRAL DO BRASIL ==========
+    print("✓ Carregando Banco Central...");
+    CreateObject(1280, 1462.3, -1006.4, 26.8, 0.0, 0.0, 0.0); // Entrada principal
+    CreateObject(3472, 1462.3, -1020.0, 28.0, 0.0, 0.0, 0.0); // Placa banco
+    CreateObject(3864, 1470.0, -1010.0, 26.8, 0.0, 0.0, 0.0); // Segurança
+    
+    // ========== VEÍCULOS DO AEROPORTO ==========
+    print("✓ Adicionando veículos do aeroporto...");
+    AddStaticVehicleEx(485, 1660.0, -2340.0, 13.5, 0.0, 1, 1, 15); // Baggage (Veículo de bagagem)
+    AddStaticVehicleEx(485, 1670.0, -2340.0, 13.5, 0.0, 1, 1, 15); // Baggage
+    AddStaticVehicleEx(485, 1680.0, -2340.0, 13.5, 0.0, 1, 1, 15); // Baggage
+    AddStaticVehicleEx(544, 1690.0, -2340.0, 13.5, 0.0, 1, 1, 15); // Firetruck (Bombeiros do aeroporto)
+    AddStaticVehicleEx(431, 1700.0, -2340.0, 13.5, 0.0, 1, 1, 15); // Bus (Ônibus do aeroporto)
+    AddStaticVehicleEx(431, 1710.0, -2340.0, 13.5, 0.0, 1, 1, 15); // Bus
+    
+    // Táxis do aeroporto
+    AddStaticVehicleEx(420, 1640.0, -2310.0, 13.5, 0.0, 6, 1, 15); // Taxi
+    AddStaticVehicleEx(420, 1644.0, -2310.0, 13.5, 0.0, 6, 1, 15); // Taxi
+    AddStaticVehicleEx(420, 1648.0, -2310.0, 13.5, 0.0, 6, 1, 15); // Taxi
+    
+    // ========== VEÍCULOS OFICIAIS ==========
+    print("✓ Adicionando veículos oficiais...");
     AddStaticVehicleEx(596, 1560.0, -1670.0, 16.0, 0.0, 0, 1, 15); // Viatura PCERJ
     AddStaticVehicleEx(596, 1548.0, -1670.0, 16.0, 0.0, 0, 1, 15); // Viatura PCERJ
+    AddStaticVehicleEx(599, 1552.0, -1670.0, 16.0, 0.0, 0, 1, 15); // Viatura PCERJ (Ranger)
     AddStaticVehicleEx(416, 1475.0, -1765.0, 18.8, 0.0, 1, 3, 15); // Ambulância
+    AddStaticVehicleEx(416, 1479.0, -1765.0, 18.8, 0.0, 1, 3, 15); // Ambulância
     
-    // Veículos civis
-    AddStaticVehicleEx(411, 1680.0, -2330.0, 13.5, 0.0, -1, -1, 15); // Infernus at airport
-    AddStaticVehicleEx(522, 1690.0, -2330.0, 13.5, 0.0, -1, -1, 15); // NRG-500
-    AddStaticVehicleEx(420, 1475.0, -1780.0, 18.8, 0.0, 6, 1, 15); // Taxi
+    // ========== VEÍCULOS CIVIS DIVERSOS ==========
+    print("✓ Adicionando veículos civis...");
+    AddStaticVehicleEx(411, 1620.0, -2290.0, 13.5, 0.0, -1, -1, 15); // Infernus
+    AddStaticVehicleEx(522, 1624.0, -2290.0, 13.5, 0.0, -1, -1, 15); // NRG-500
+    AddStaticVehicleEx(560, 1628.0, -2290.0, 13.5, 0.0, -1, -1, 15); // Sultan
+    AddStaticVehicleEx(562, 1632.0, -2290.0, 13.5, 0.0, -1, -1, 15); // Elegy
     
     print("✓ Servidor inicializado com sucesso!");
     print("====================================\n");
@@ -243,19 +371,20 @@ public OnPlayerConnect(playerid) {
     // Resetando dados do player
     ResetPlayerData(playerid);
     
-    // Sistema de login com TextDraw
-    CreateLoginScreen(playerid);
-    
-    // Mensagem de boas-vindas
-    new string[256];
-    format(string, sizeof(string), "{FFFFFF}Bem-vindo ao {00FF00}%s{FFFFFF}!", GAMEMODE_NAME);
-    SendClientMessage(playerid, COLOR_WHITE, string);
-    SendClientMessage(playerid, COLOR_YELLOW, "➤ Digite /login [senha] para entrar ou /registro [senha] para se registrar");
+    // Sistema moderno de login/registro
+    MostrarTelaLogin(playerid);
     
     // Congelar player na tela de login
     TogglePlayerControllable(playerid, 0);
-    SetPlayerCameraPos(playerid, 1481.0, -1742.0, 25.0);
-    SetPlayerCameraLookAt(playerid, 1481.0, -1772.3, 18.8);
+    
+    // Câmera cinematográfica no Cristo Redentor
+    SetPlayerCameraPos(playerid, -2000.0, -1600.0, 150.0);
+    SetPlayerCameraLookAt(playerid, -2026.0, -1634.0, 140.0);
+    
+    // Mensagem de boas-vindas
+    new string[128];
+    format(string, sizeof(string), "~g~Bem-vindo ao ~w~%s", GAMEMODE_NAME);
+    GameTextForPlayer(playerid, string, 3000, 1);
     
     // Atualizando players online
     gPlayersOnline++;
@@ -265,7 +394,7 @@ public OnPlayerConnect(playerid) {
 
 public OnPlayerDisconnect(playerid, reason) {
     if(gPlayerInfo[playerid][pLogged]) {
-        // Save player data here
+        // Salvar dados do player (aqui integraria com banco de dados)
         GetPlayerPos(playerid, gPlayerInfo[playerid][pPosX], gPlayerInfo[playerid][pPosY], gPlayerInfo[playerid][pPosZ]);
         GetPlayerFacingAngle(playerid, gPlayerInfo[playerid][pAngle]);
         gPlayerInfo[playerid][pInterior] = GetPlayerInterior(playerid);
@@ -273,6 +402,16 @@ public OnPlayerDisconnect(playerid, reason) {
         
         GetPlayerHealth(playerid, gPlayerInfo[playerid][pHealth]);
         GetPlayerArmour(playerid, gPlayerInfo[playerid][pArmour]);
+        
+        // Log de desconexão
+        new string[128];
+        format(string, sizeof(string), "Player %s desconectou do servidor", gPlayerInfo[playerid][pName]);
+        print(string);
+    }
+    
+    // Fechar tela de login se ativa
+    if(gPlayerInfo[playerid][pLoginScreenActive]) {
+        FecharTelaLogin(playerid);
     }
     
     // Resetando dados
@@ -287,17 +426,25 @@ public OnPlayerDisconnect(playerid, reason) {
 public OnPlayerSpawn(playerid) {
     if(!gPlayerInfo[playerid][pLogged]) return Kick(playerid);
     
-    // Primeira vez spawning
+    // Primeira vez spawning - Aeroporto Internacional Tom Jobim (Galeão)
     if(!gPlayerInfo[playerid][pSpawned]) {
-        SetPlayerPos(playerid, 1680.3, -2324.8, 13.5); // Aeroporto (Galeão)
-        SetPlayerFacingAngle(playerid, 90.0);
+        SetPlayerPos(playerid, 1680.0, -2310.0, 13.5); // Terminal do aeroporto
+        SetPlayerFacingAngle(playerid, 0.0);
         SetPlayerInterior(playerid, 0);
         SetPlayerVirtualWorld(playerid, 0);
         SetCameraBehindPlayer(playerid);
         
+        // Mensagem de boas-vindas no spawn
+        SendClientMessage(playerid, COLOR_GREEN, "✈️ Bem-vindo ao Aeroporto Internacional Tom Jobim (Galeão)!");
+        SendClientMessage(playerid, COLOR_YELLOW, "➤ Use /gps para navegar pela cidade do Rio de Janeiro");
+        SendClientMessage(playerid, COLOR_WHITE, "➤ Digite /ajuda para ver os comandos disponíveis");
+        
+        // Efeito visual de chegada
+        GameTextForPlayer(playerid, "~g~Chegada ao Rio de Janeiro~n~~w~Aeroporto Internacional", 5000, 1);
+        
         gPlayerInfo[playerid][pSpawned] = 1;
     } else {
-        // Spawn normal
+        // Spawn normal (posição salva)
         SetPlayerPos(playerid, gPlayerInfo[playerid][pPosX], gPlayerInfo[playerid][pPosY], gPlayerInfo[playerid][pPosZ]);
         SetPlayerFacingAngle(playerid, gPlayerInfo[playerid][pAngle]);
         SetPlayerInterior(playerid, gPlayerInfo[playerid][pInterior]);
@@ -309,6 +456,8 @@ public OnPlayerSpawn(playerid) {
     SetPlayerArmour(playerid, gPlayerInfo[playerid][pArmour]);
     SetPlayerScore(playerid, gPlayerInfo[playerid][pLevel]);
     
+    // Skin padrão se não definido
+    if(gPlayerInfo[playerid][pSkin] == 0) gPlayerInfo[playerid][pSkin] = (gPlayerInfo[playerid][pSex] == 1) ? 12 : 55;
     SetPlayerSkin(playerid, gPlayerInfo[playerid][pSkin]);
     
     return 1;
@@ -323,42 +472,13 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     new idx = 0;
     cmd = strtok(cmdtext, idx);
     
-    // Login System
-    if(strcmp("/login", cmd, true) == 0) {
-        if(gPlayerInfo[playerid][pLogged]) return SendClientMessage(playerid, COLOR_RED, "Você já está logado!");
-        tmp = strtok(cmdtext, idx);
-        if(!strlen(tmp)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /login [senha]");
-        
-        // Simular login (aqui seria verificação de banco de dados)
-        if(strcmp(tmp, "123456", true) == 0) {
-            gPlayerInfo[playerid][pLogged] = 1;
-            gPlayerInfo[playerid][pMoney] = 5000;
-            gPlayerInfo[playerid][pLevel] = 1;
-            DestroyLoginScreen(playerid);
-            TogglePlayerControllable(playerid, 1);
-            SetCameraBehindPlayer(playerid);
-            SendClientMessage(playerid, COLOR_GREEN, "Login realizado com sucesso!");
-            SpawnPlayer(playerid);
-        } else {
-            SendClientMessage(playerid, COLOR_RED, "Senha incorreta!");
-        }
-        return 1;
-    }
-    
-    if(strcmp("/registro", cmd, true) == 0) {
-        if(gPlayerInfo[playerid][pLogged]) return SendClientMessage(playerid, COLOR_RED, "Você já está logado!");
-        tmp = strtok(cmdtext, idx);
-        if(!strlen(tmp)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /registro [senha]");
-        
-        format(gPlayerInfo[playerid][pPassword], 64, "%s", tmp);
-        gPlayerInfo[playerid][pLogged] = 1;
-        gPlayerInfo[playerid][pMoney] = 2500;
-        gPlayerInfo[playerid][pLevel] = 1;
-        DestroyLoginScreen(playerid);
-        TogglePlayerControllable(playerid, 1);
-        SetCameraBehindPlayer(playerid);
-        SendClientMessage(playerid, COLOR_GREEN, "Registro realizado com sucesso!");
-        SpawnPlayer(playerid);
+    // Comando para reabrir tela de login (admin/debug)
+    if(strcmp("/relogin", cmd, true) == 0) {
+        if(gPlayerInfo[playerid][pAdminLevel] < 1) return SendClientMessage(playerid, COLOR_RED, "Comando apenas para administradores!");
+        FecharTelaLogin(playerid);
+        gPlayerInfo[playerid][pLogged] = 0;
+        MostrarTelaLogin(playerid);
+        TogglePlayerControllable(playerid, 0);
         return 1;
     }
     
@@ -461,9 +581,57 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     }
     
     if(strcmp("/rj", cmd, true) == 0) {
-        SendClientMessage(playerid, COLOR_GREEN, "Bem-vindo ao Rio de Janeiro RolePlay!");
+        SendClientMessage(playerid, COLOR_GREEN, "=== RIO DE JANEIRO ROLEPLAY ===");
         SendClientMessage(playerid, COLOR_YELLOW, "Versão: " GAMEMODE_VERSION);
-        SendClientMessage(playerid, COLOR_WHITE, "Visite: /gps para navegar pela cidade");
+        SendClientMessage(playerid, COLOR_WHITE, "🗺️ Use /gps para navegar pela cidade");
+        SendClientMessage(playerid, COLOR_WHITE, "🏠 Use /casa para comprar propriedades");
+        SendClientMessage(playerid, COLOR_WHITE, "🚗 Use /veiculo para comprar veículos");
+        SendClientMessage(playerid, COLOR_WHITE, "💼 Use /emprego para trabalhar");
+        return 1;
+    }
+    
+    // Sistema de Dinheiro
+    if(strcmp("/dinheiro", cmd, true) == 0) {
+        new string[128];
+        format(string, sizeof(string), "💰 Dinheiro: R$ %d | 🏦 Banco: R$ %d", gPlayerInfo[playerid][pMoney], gPlayerInfo[playerid][pBankMoney]);
+        SendClientMessage(playerid, COLOR_GREEN, string);
+        return 1;
+    }
+    
+    // Sistema de Teleporte para pontos turísticos
+    if(strcmp("/cristo", cmd, true) == 0) {
+        SetPlayerPos(playerid, -2026.0, -1634.0, 140.0);
+        SetPlayerFacingAngle(playerid, 180.0);
+        SendClientMessage(playerid, COLOR_GREEN, "🗽 Você foi teleportado para o Cristo Redentor!");
+        return 1;
+    }
+    
+    if(strcmp("/paodeacucar", cmd, true) == 0) {
+        SetPlayerPos(playerid, -1300.0, -750.0, 80.0);
+        SetPlayerFacingAngle(playerid, 180.0);
+        SendClientMessage(playerid, COLOR_GREEN, "🚡 Você foi teleportado para o Pão de Açúcar!");
+        return 1;
+    }
+    
+    if(strcmp("/copacabana", cmd, true) == 0) {
+        SetPlayerPos(playerid, -1810.0, -590.0, 12.0);
+        SetPlayerFacingAngle(playerid, 180.0);
+        SendClientMessage(playerid, COLOR_GREEN, "🏖️ Você foi teleportado para Copacabana!");
+        return 1;
+    }
+    
+    if(strcmp("/maracana", cmd, true) == 0) {
+        SetPlayerPos(playerid, -1680.0, 1000.0, 15.0);
+        SetPlayerFacingAngle(playerid, 180.0);
+        SendClientMessage(playerid, COLOR_GREEN, "⚽ Você foi teleportado para o Maracanã!");
+        return 1;
+    }
+    
+    // Comando para ir ao aeroporto
+    if(strcmp("/aeroporto", cmd, true) == 0) {
+        SetPlayerPos(playerid, 1680.0, -2310.0, 13.5);
+        SetPlayerFacingAngle(playerid, 0.0);
+        SendClientMessage(playerid, COLOR_GREEN, "✈️ Você foi teleportado para o Aeroporto Internacional Tom Jobim!");
         return 1;
     }
     
@@ -478,6 +646,7 @@ stock ResetPlayerData(playerid) {
     gPlayerInfo[playerid][pID] = 0;
     gPlayerInfo[playerid][pName][0] = '\0';
     gPlayerInfo[playerid][pPassword][0] = '\0';
+    gPlayerInfo[playerid][pEmail][0] = '\0';
     gPlayerInfo[playerid][pAge] = 0;
     gPlayerInfo[playerid][pSex] = 0;
     gPlayerInfo[playerid][pSkin] = 0;
@@ -504,73 +673,251 @@ stock ResetPlayerData(playerid) {
     gPlayerInfo[playerid][pLogged] = 0;
     gPlayerInfo[playerid][pSpawned] = 0;
     gPlayerInfo[playerid][pGPSActive] = 0;
+    gPlayerInfo[playerid][pRegistrationStep] = 0;
+    gPlayerInfo[playerid][pLoginAttempts] = 0;
+    gPlayerInfo[playerid][pLoginScreenActive] = false;
+    gPlayerInfo[playerid][pRegisterMode] = false;
+    
+    // Resetar TextDraws
+    for(new i = 0; i < MAX_LOGIN_TEXTDRAWS; i++) {
+        gPlayerInfo[playerid][pLoginTD][i] = Text:INVALID_TEXT_DRAW;
+    }
     
     GetPlayerName(playerid, gPlayerInfo[playerid][pName], MAX_PLAYER_NAME);
 }
 
 // =============================================================================
-// SISTEMA DE LOGIN
+// SISTEMA MODERNO DE LOGIN/REGISTRO
 // =============================================================================
 
-stock CreateLoginScreen(playerid) {
-    // Background
-    gPlayerInfo[playerid][pLoginBG] = TextDrawCreate(200.0, 150.0, "box");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginBG], 0.0, 12.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginBG], 440.0, 0.0);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginBG], 1);
-    TextDrawColor(gPlayerInfo[playerid][pLoginBG], -1);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginBG], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginBG], 0x000000BB);
-    TextDrawBackgroundColor(gPlayerInfo[playerid][pLoginBG], 255);
-    TextDrawFont(gPlayerInfo[playerid][pLoginBG], 1);
-    TextDrawSetProportional(gPlayerInfo[playerid][pLoginBG], 1);
+stock MostrarTelaLogin(playerid) {
+    gPlayerInfo[playerid][pLoginScreenActive] = true;
+    gPlayerInfo[playerid][pRegisterMode] = false;
     
-    // Title
-    gPlayerInfo[playerid][pLoginTitle] = TextDrawCreate(320.0, 160.0, "~g~RIO DE JANEIRO ~w~ROLEPLAY");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTitle], 0.4, 2.0);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginTitle], 2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTitle], -1);
-    TextDrawSetShadow(gPlayerInfo[playerid][pLoginTitle], 0);
-    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTitle], 1);
-    TextDrawBackgroundColor(gPlayerInfo[playerid][pLoginTitle], 255);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTitle], 1);
-    TextDrawSetProportional(gPlayerInfo[playerid][pLoginTitle], 1);
+    // Fundo principal (dividido ao meio)
+    gPlayerInfo[playerid][pLoginTD][0] = TextDrawCreate(80.0, 120.0, "box"); // Lado esquerdo (registro)
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][0], 0.0, 25.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][0], 320.0, 0.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][0], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][0], 0xFFFFFF99); // Branco semi-transparente
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][0], 0);
     
-    // Login Text
-    new loginText[256];
-    format(loginText, sizeof(loginText), "~w~Bem-vindo, ~y~%s~w~!~n~~n~Para acessar o servidor:~n~~y~/login [senha]~w~ - Fazer login~n~~y~/registro [senha]~w~ - Se registrar", gPlayerInfo[playerid][pName]);
-    gPlayerInfo[playerid][pLoginText] = TextDrawCreate(320.0, 200.0, loginText);
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginText], 0.25, 1.2);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginText], 2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginText], -1);
-    TextDrawSetShadow(gPlayerInfo[playerid][pLoginText], 0);
-    TextDrawSetOutline(gPlayerInfo[playerid][pLoginText], 1);
-    TextDrawBackgroundColor(gPlayerInfo[playerid][pLoginText], 255);
-    TextDrawFont(gPlayerInfo[playerid][pLoginText], 1);
-    TextDrawSetProportional(gPlayerInfo[playerid][pLoginText], 1);
+    gPlayerInfo[playerid][pLoginTD][1] = TextDrawCreate(320.0, 120.0, "box"); // Lado direito (login)
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][1], 0.0, 25.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][1], 560.0, 0.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][1], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][1], 0x87CEEBAA); // Azul claro semi-transparente
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][1], 0);
     
-    // Show textdraws
-    TextDrawShowForPlayer(playerid, gPlayerInfo[playerid][pLoginBG]);
-    TextDrawShowForPlayer(playerid, gPlayerInfo[playerid][pLoginTitle]);
-    TextDrawShowForPlayer(playerid, gPlayerInfo[playerid][pLoginText]);
+    // Título principal
+    gPlayerInfo[playerid][pLoginTD][2] = TextDrawCreate(320.0, 90.0, "~g~RIO DE JANEIRO ~w~ROLEPLAY");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][2], 0.5, 2.5);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][2], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][2], -1);
+    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTD][2], 2);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][2], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][2], 0);
+    
+    // Seção REGISTRO (lado esquerdo)
+    gPlayerInfo[playerid][pLoginTD][3] = TextDrawCreate(200.0, 130.0, "~w~Registration");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][3], 0.4, 1.8);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][3], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][3], 0x333333FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][3], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][3], 0);
+    
+    // Campos do registro
+    gPlayerInfo[playerid][pLoginTD][4] = TextDrawCreate(90.0, 160.0, "~w~Nome:");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][4], 0.25, 1.2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][4], 0x333333FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][4], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][4], 0);
+    
+    new nameBox[64];
+    format(nameBox, sizeof(nameBox), "~w~%s", gPlayerInfo[playerid][pName]);
+    gPlayerInfo[playerid][pLoginTD][5] = TextDrawCreate(90.0, 175.0, nameBox);
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][5], 0.25, 1.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][5], 310.0, 10.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][5], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][5], 0xFFFFFFCC);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][5], 0x000000FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][5], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][5], 0);
+    
+    gPlayerInfo[playerid][pLoginTD][6] = TextDrawCreate(90.0, 200.0, "~w~E-mail:");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][6], 0.25, 1.2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][6], 0x333333FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][6], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][6], 0);
+    
+    gPlayerInfo[playerid][pLoginTD][7] = TextDrawCreate(90.0, 215.0, "~w~Digite seu e-mail...");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][7], 0.25, 1.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][7], 310.0, 10.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][7], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][7], 0xFFFFFFCC);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][7], 0x888888FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][7], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][7], 1);
+    
+    gPlayerInfo[playerid][pLoginTD][8] = TextDrawCreate(90.0, 240.0, "~w~Senha:");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][8], 0.25, 1.2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][8], 0x333333FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][8], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][8], 0);
+    
+    gPlayerInfo[playerid][pLoginTD][9] = TextDrawCreate(90.0, 255.0, "~w~Digite sua senha...");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][9], 0.25, 1.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][9], 310.0, 10.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][9], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][9], 0xFFFFFFCC);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][9], 0x888888FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][9], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][9], 1);
+    
+    // Botão REGISTRAR
+    gPlayerInfo[playerid][pLoginTD][10] = TextDrawCreate(200.0, 290.0, "~w~Register");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][10], 0.35, 1.5);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][10], 280.0, 15.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][10], 2);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][10], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][10], 0x87CEEBFF); // Azul claro
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][10], 0xFFFFFFFF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][10], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][10], 1);
+    
+    // Seção LOGIN (lado direito)
+    gPlayerInfo[playerid][pLoginTD][11] = TextDrawCreate(440.0, 130.0, "~w~Welcome Back!");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][11], 0.4, 1.8);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][11], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][11], 0xFFFFFFFF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][11], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][11], 0);
+    
+    // Campos do login
+    gPlayerInfo[playerid][pLoginTD][12] = TextDrawCreate(330.0, 160.0, "~w~Nome:");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][12], 0.25, 1.2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][12], 0xFFFFFFFF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][12], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][12], 0);
+    
+    gPlayerInfo[playerid][pLoginTD][13] = TextDrawCreate(330.0, 175.0, nameBox);
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][13], 0.25, 1.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][13], 550.0, 10.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][13], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][13], 0xFFFFFFCC);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][13], 0x000000FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][13], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][13], 0);
+    
+    gPlayerInfo[playerid][pLoginTD][14] = TextDrawCreate(330.0, 210.0, "~w~Senha:");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][14], 0.25, 1.2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][14], 0xFFFFFFFF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][14], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][14], 0);
+    
+    gPlayerInfo[playerid][pLoginTD][15] = TextDrawCreate(330.0, 225.0, "~w~Digite sua senha...");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][15], 0.25, 1.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][15], 550.0, 10.0);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][15], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][15], 0xFFFFFFCC);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][15], 0x888888FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][15], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][15], 1);
+    
+    // Botão LOGIN
+    gPlayerInfo[playerid][pLoginTD][16] = TextDrawCreate(440.0, 270.0, "~w~Login");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][16], 0.35, 1.5);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][16], 520.0, 15.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][16], 2);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][16], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][16], 0xFFFFFFFF); // Branco
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][16], 0x333333FF);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][16], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][16], 1);
+    
+    // Rodapé
+    gPlayerInfo[playerid][pLoginTD][17] = TextDrawCreate(320.0, 330.0, "~w~Created by ~g~Orion ~w~Development Team");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][17], 0.2, 1.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][17], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][17], 0xFFFFFFAA);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][17], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][17], 0);
+    
+    // Mostrar todas as TextDraws
+    for(new i = 0; i < 18; i++) {
+        TextDrawShowForPlayer(playerid, gPlayerInfo[playerid][pLoginTD][i]);
+    }
+    
+    SelectTextDraw(playerid, 0x87CEEBFF);
 }
 
-stock DestroyLoginScreen(playerid) {
-    if(gPlayerInfo[playerid][pLoginBG] != Text:INVALID_TEXT_DRAW) {
-        TextDrawHideForPlayer(playerid, gPlayerInfo[playerid][pLoginBG]);
-        TextDrawDestroy(gPlayerInfo[playerid][pLoginBG]);
-        gPlayerInfo[playerid][pLoginBG] = Text:INVALID_TEXT_DRAW;
+stock MostrarTelaRegistro(playerid) {
+    gPlayerInfo[playerid][pRegisterMode] = true;
+    // Aqui você pode modificar as TextDraws para destacar o lado do registro
+}
+
+stock FecharTelaLogin(playerid) {
+    if(!gPlayerInfo[playerid][pLoginScreenActive]) return;
+    
+    for(new i = 0; i < MAX_LOGIN_TEXTDRAWS; i++) {
+        if(gPlayerInfo[playerid][pLoginTD][i] != Text:INVALID_TEXT_DRAW) {
+            TextDrawHideForPlayer(playerid, gPlayerInfo[playerid][pLoginTD][i]);
+            TextDrawDestroy(gPlayerInfo[playerid][pLoginTD][i]);
+            gPlayerInfo[playerid][pLoginTD][i] = Text:INVALID_TEXT_DRAW;
+        }
     }
-    if(gPlayerInfo[playerid][pLoginTitle] != Text:INVALID_TEXT_DRAW) {
-        TextDrawHideForPlayer(playerid, gPlayerInfo[playerid][pLoginTitle]);
-        TextDrawDestroy(gPlayerInfo[playerid][pLoginTitle]);
-        gPlayerInfo[playerid][pLoginTitle] = Text:INVALID_TEXT_DRAW;
+    
+    gPlayerInfo[playerid][pLoginScreenActive] = false;
+    CancelSelectTextDraw(playerid);
+}
+
+stock ProcessarCliqueLogin(playerid, Text:clicked) {
+    // Botão Register
+    if(clicked == gPlayerInfo[playerid][pLoginTD][10]) {
+        ShowPlayerDialog(playerid, DIALOG_EMAIL_CONFIRM, DIALOG_STYLE_INPUT, 
+            "{FF0000}Confirmação de E-mail", 
+            "{FFFFFF}Digite seu endereço de e-mail para confirmar o registro:\n\n{FFFF00}Exemplo: luisrafael@gmail.com", 
+            "Confirm", "Cancel");
+        return 1;
     }
-    if(gPlayerInfo[playerid][pLoginText] != Text:INVALID_TEXT_DRAW) {
-        TextDrawHideForPlayer(playerid, gPlayerInfo[playerid][pLoginText]);
-        TextDrawDestroy(gPlayerInfo[playerid][pLoginText]);
-        gPlayerInfo[playerid][pLoginText] = Text:INVALID_TEXT_DRAW;
+    
+    // Botão Login
+    if(clicked == gPlayerInfo[playerid][pLoginTD][16]) {
+        ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD, 
+            "{00FF00}Fazer Login", 
+            "{FFFFFF}Digite sua senha para acessar o servidor:", 
+            "Entrar", "Cancel");
+        return 1;
     }
+    
+    // Campo de e-mail (registro)
+    if(clicked == gPlayerInfo[playerid][pLoginTD][7]) {
+        ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_INPUT, 
+            "{00FF00}Registro - E-mail", 
+            "{FFFFFF}Digite seu e-mail:", 
+            "OK", "Cancel");
+        return 1;
+    }
+    
+    // Campo de senha (registro)
+    if(clicked == gPlayerInfo[playerid][pLoginTD][9]) {
+        ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_PASSWORD, 
+            "{00FF00}Registro - Senha", 
+            "{FFFFFF}Digite sua senha:", 
+            "OK", "Cancel");
+        return 1;
+    }
+    
+    // Campo de senha (login)
+    if(clicked == gPlayerInfo[playerid][pLoginTD][15]) {
+        ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD, 
+            "{00FF00}Fazer Login", 
+            "{FFFFFF}Digite sua senha:", 
+            "Entrar", "Cancel");
+        return 1;
+    }
+    
+    return 0;
 }
 
 // =============================================================================
@@ -607,7 +954,98 @@ stock SetPlayerGPS(playerid, Float:x, Float:y, Float:z) {
 // DIALOG RESPONSES
 // =============================================================================
 
+public OnPlayerClickTextDraw(playerid, Text:clickedid) {
+    if(gPlayerInfo[playerid][pLoginScreenActive]) {
+        ProcessarCliqueLogin(playerid, clickedid);
+    }
+    return 1;
+}
+
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
+    // Sistema de Login/Registro
+    if(dialogid == DIALOG_LOGIN && response) {
+        if(!strlen(inputtext)) {
+            GameTextForPlayer(playerid, "~r~Senha invalida!", 3000, 3);
+            return 1;
+        }
+        
+        // Simular verificação de senha (aqui integraria com banco de dados)
+        if(strcmp(inputtext, "123456", false) == 0) {
+            gPlayerInfo[playerid][pLogged] = 1;
+            gPlayerInfo[playerid][pMoney] = 5000;
+            gPlayerInfo[playerid][pBankMoney] = 2000;
+            gPlayerInfo[playerid][pLevel] = 1;
+            gPlayerInfo[playerid][pHealth] = 100.0;
+            gPlayerInfo[playerid][pSex] = 1; // Masculino
+            
+            FecharTelaLogin(playerid);
+            TogglePlayerControllable(playerid, 1);
+            SetCameraBehindPlayer(playerid);
+            
+            GameTextForPlayer(playerid, "~g~Login realizado com sucesso!", 3000, 1);
+            SendClientMessage(playerid, COLOR_GREEN, "✅ Bem-vindo de volta ao Rio de Janeiro RolePlay!");
+            SpawnPlayer(playerid);
+        } else {
+            gPlayerInfo[playerid][pLoginAttempts]++;
+            if(gPlayerInfo[playerid][pLoginAttempts] >= 3) {
+                GameTextForPlayer(playerid, "~r~Muitas tentativas incorretas!", 3000, 3);
+                Kick(playerid);
+            } else {
+                GameTextForPlayer(playerid, "~r~Senha incorreta!", 3000, 3);
+            }
+        }
+        return 1;
+    }
+    
+    if(dialogid == DIALOG_EMAIL_CONFIRM && response) {
+        if(!strlen(inputtext)) {
+            GameTextForPlayer(playerid, "~r~E-mail invalido!", 3000, 3);
+            return 1;
+        }
+        
+        // Validar formato de e-mail básico
+        if(strfind(inputtext, "@", true) == -1 || strfind(inputtext, ".", true) == -1) {
+            GameTextForPlayer(playerid, "~r~Formato de e-mail invalido!", 3000, 3);
+            SendClientMessage(playerid, COLOR_RED, "❌ Use o formato: exemplo@gmail.com");
+            return 1;
+        }
+        
+        format(gPlayerInfo[playerid][pEmail], 64, "%s", inputtext);
+        
+        ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_PASSWORD, 
+            "{00FF00}Finalizar Registro", 
+            "{FFFFFF}Agora digite uma senha segura para sua conta:\n\n{FFFF00}• Mínimo 6 caracteres\n• Use letras e números", 
+            "Registrar", "Cancel");
+        return 1;
+    }
+    
+    if(dialogid == DIALOG_REGISTER && response) {
+        if(!strlen(inputtext) || strlen(inputtext) < 6) {
+            GameTextForPlayer(playerid, "~r~Senha muito fraca!", 3000, 3);
+            SendClientMessage(playerid, COLOR_RED, "❌ A senha deve ter pelo menos 6 caracteres!");
+            return 1;
+        }
+        
+        format(gPlayerInfo[playerid][pPassword], 64, "%s", inputtext);
+        gPlayerInfo[playerid][pLogged] = 1;
+        gPlayerInfo[playerid][pMoney] = 2500;
+        gPlayerInfo[playerid][pBankMoney] = 1000;
+        gPlayerInfo[playerid][pLevel] = 1;
+        gPlayerInfo[playerid][pHealth] = 100.0;
+        gPlayerInfo[playerid][pSex] = 1; // Padrão masculino
+        
+        FecharTelaLogin(playerid);
+        TogglePlayerControllable(playerid, 1);
+        SetCameraBehindPlayer(playerid);
+        
+        GameTextForPlayer(playerid, "~g~Registro realizado com sucesso!", 3000, 1);
+        SendClientMessage(playerid, COLOR_GREEN, "✅ Bem-vindo ao Rio de Janeiro RolePlay!");
+        SendClientMessage(playerid, COLOR_YELLOW, "🎯 Sua conta foi criada com sucesso!");
+        SpawnPlayer(playerid);
+        return 1;
+    }
+    
+    // Sistema GPS
     if(dialogid == DIALOG_GPS && response) {
         if(listitem >= 0 && listitem < sizeof(gGPSLocations)) {
             SetPlayerGPS(playerid, gGPSLocations[listitem][gpsX], gGPSLocations[listitem][gpsY], gGPSLocations[listitem][gpsZ]);
@@ -617,6 +1055,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
         }
     }
     
+    // Sistema de Empregos
     if(dialogid == DIALOG_JOB_AGENCY && response) {
         if(listitem >= 0 && listitem < sizeof(gJobNames)-1) {
             gPlayerInfo[playerid][pJob] = listitem + 1;
@@ -627,6 +1066,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
         }
     }
     
+    // Sistema da Prefeitura
     if(dialogid == DIALOG_CITY_HALL && response) {
         new prices[] = {50, 200, 500, 30};
         new services[][32] = {"Carteira de Identidade", "Carteira de Motorista", "Licença de Arma", "Certidão de Nascimento"};
