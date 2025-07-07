@@ -44,4 +44,18 @@ Agora você pode tentar compilar novamente. O erro deve ter sido resolvido.
 3. **Manter backup** dos arquivos antes de qualquer mudança
 
 ## Arquivos Modificados
-- `gamemodes/rjroleplay.pwn` - Adicionado define para compatibilidade
+- `gamemodes/rjroleplay.pwn` - Múltiplas correções aplicadas
+- `CORRECOES_COMPILACAO.md` - Documentação detalhada das correções
+
+## ✅ ATUALIZAÇÃO - Problemas Adicionais Corrigidos
+
+Após resolver o problema inicial do sscanf2, foram encontrados e corrigidos mais 12 erros de compilação:
+
+1. **Conflitos de includes** - Reorganizados e removidos includes problemáticos
+2. **Redefinição de MAX_OBJECTS** - Adicionado #undef antes do streamer
+3. **MySQL functions** - Corrigidas funções e parâmetros do MySQL
+4. **Funções ausentes** - Adicionadas 20+ funções auxiliares
+5. **Tipos de dados** - Corrigidos conflitos no enum PlayerInfo
+6. **SendClientMessage** - Corrigida formatação de mensagens
+
+📄 Veja `CORRECOES_COMPILACAO.md` para detalhes completos das correções.

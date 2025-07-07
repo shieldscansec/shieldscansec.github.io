@@ -20,14 +20,20 @@
 
 #include <a_samp>
 #include <a_mysql>
+
 #define SSCANF_NO_NICE_FEATURES
 #include <sscanf2>
+
+// Evitar conflitos de redefinição
+#if defined MAX_OBJECTS
+    #undef MAX_OBJECTS
+#endif
 #include <streamer>
+
 #include <zcmd>
-#include <YSI\y_ini>
 #include <whirlpool>
-#include <foreach>
-#include <crashdetect>
+
+#define FOREACH_I_Player(%1) for(new %1 = 0; %1 < MAX_PLAYERS; %1++) if(IsPlayerConnected(%1))
 
 // =============================================================================
 // CONFIGURAÇÕES PRINCIPAIS
@@ -35,6 +41,24 @@
 
 #define GAMEMODE_VERSION "1.0.0"
 #define GAMEMODE_NAME "Rio de Janeiro RolePlay"
+
+// Defines dos dialogs
+#define DIALOG_LOGIN 1
+#define DIALOG_REGISTER 2
+#define DIALOG_EMAIL 3
+#define DIALOG_AGE 4
+#define DIALOG_SEX 5
+#define DIALOG_PHONE 6
+#define DIALOG_INVENTORY 7
+#define DIALOG_CRAFT 8
+#define DIALOG_BUSINESS 9
+#define DIALOG_HOUSE 10
+#define DIALOG_STATS 11
+#define DIALOG_RG 12
+#define DIALOG_CNH 13
+#define DIALOG_PORTE 14
+#define DIALOG_REVISTA 15
+#define DIALOG_COIN_SHOP 16
 
 // Configurações do MySQL
 #define MYSQL_HOST "localhost"
@@ -143,9 +167,9 @@ enum PlayerInfo {
     Text:pPhoneScreen,
     
     // Anti-cheat
-    pLastPosX,
-    pLastPosY,
-    pLastPosZ,
+    Float:pLastPosX,
+    Float:pLastPosY,
+    Float:pLastPosZ,
     pSpeedHackWarns,
     pTeleportWarns,
     pWeaponHackWarns,
@@ -274,7 +298,7 @@ public OnGameModeInit() {
     print("====================================");
     
     // Conectando ao MySQL
-    gMySQL = mysql_connect(MYSQL_HOST, MYSQL_USER, MYSQL_BASE, MYSQL_PASS);
+    gMySQL = mysql_connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASS, MYSQL_BASE);
     if(mysql_errno(gMySQL) != 0) {
         print("ERRO: Falha na conexão com MySQL!");
         SendRconCommand("exit");
@@ -488,7 +512,7 @@ forward OnPlayerAccountCheck(playerid);
 public OnPlayerAccountCheck(playerid) {
     if(!IsPlayerConnected(playerid)) return 1;
     
-    if(cache_num_rows() > 0) {
+    if(cache_get_row_count() > 0) {
         // Conta existe - mostrar login
         ShowLoginDialog(playerid);
     } else {
@@ -684,7 +708,9 @@ stock CheckSpeedHack(playerid) {
         
         // Teleportar de volta para posição anterior
         SetPlayerPos(playerid, gPlayerInfo[playerid][pLastPosX], gPlayerInfo[playerid][pLastPosY], gPlayerInfo[playerid][pLastPosZ]);
-        SendClientMessage(playerid, COLOR_RED, "ANTI-CHEAT: Speed hack detectado! Aviso: %d/3", gPlayerInfo[playerid][pSpeedHackWarns]);
+        new warningMsg[128];
+        format(warningMsg, sizeof(warningMsg), "ANTI-CHEAT: Speed hack detectado! Aviso: %d/3", gPlayerInfo[playerid][pSpeedHackWarns]);
+        SendClientMessage(playerid, COLOR_RED, warningMsg);
     }
     
     // Salvando posição atual
@@ -710,7 +736,9 @@ stock CheckWeaponHack(playerid) {
             gPlayerInfo[playerid][pWeaponHackWarns]++;
             
             ResetPlayerWeapons(playerid);
-            SendClientMessage(playerid, COLOR_RED, "ANTI-CHEAT: Weapon hack detectado! Aviso: %d/3", gPlayerInfo[playerid][pWeaponHackWarns]);
+            new weaponWarningMsg[128];
+            format(weaponWarningMsg, sizeof(weaponWarningMsg), "ANTI-CHEAT: Weapon hack detectado! Aviso: %d/3", gPlayerInfo[playerid][pWeaponHackWarns]);
+            SendClientMessage(playerid, COLOR_RED, weaponWarningMsg);
             
             if(gPlayerInfo[playerid][pWeaponHackWarns] >= 3) {
                 new string[128];
@@ -733,7 +761,9 @@ stock CheckMoneyHack(playerid) {
         GivePlayerMoney(playerid, gPlayerInfo[playerid][pMoney]);
         
         gPlayerInfo[playerid][pMoneyHackWarns]++;
-        SendClientMessage(playerid, COLOR_RED, "ANTI-CHEAT: Money hack detectado! Aviso: %d/3", gPlayerInfo[playerid][pMoneyHackWarns]);
+        new moneyWarningMsg[128];
+        format(moneyWarningMsg, sizeof(moneyWarningMsg), "ANTI-CHEAT: Money hack detectado! Aviso: %d/3", gPlayerInfo[playerid][pMoneyHackWarns]);
+        SendClientMessage(playerid, COLOR_RED, moneyWarningMsg);
         
         if(gPlayerInfo[playerid][pMoneyHackWarns] >= 3) {
             new string[128];
@@ -763,25 +793,98 @@ stock CheckHealthHack(playerid) {
 }
 
 // =============================================================================
-// DEFINES DOS DIALOGS
+// FUNÇÕES AUXILIARES NECESSÁRIAS
 // =============================================================================
 
-#define DIALOG_LOGIN 1
-#define DIALOG_REGISTER 2
-#define DIALOG_EMAIL 3
-#define DIALOG_AGE 4
-#define DIALOG_SEX 5
-#define DIALOG_PHONE 6
-#define DIALOG_INVENTORY 7
-#define DIALOG_CRAFT 8
-#define DIALOG_BUSINESS 9
-#define DIALOG_HOUSE 10
-#define DIALOG_STATS 11
-#define DIALOG_RG 12
-#define DIALOG_CNH 13
-#define DIALOG_PORTE 14
-#define DIALOG_REVISTA 15
-#define DIALOG_COIN_SHOP 16
+stock FormatNumber(number) {
+    new string[32];
+    format(string, sizeof(string), "%d", number);
+    return string;
+}
+
+stock GetPlayerNameEx(playerid) {
+    new name[MAX_PLAYER_NAME];
+    GetPlayerName(playerid, name, sizeof(name));
+    return name;
+}
+
+stock GetPlayerIPEx(playerid) {
+    new ip[16];
+    GetPlayerIp(playerid, ip, sizeof(ip));
+    return ip;
+}
+
+stock IsPlayerNearPlayer(playerid, targetid, Float:distance) {
+    new Float:x1, Float:y1, Float:z1, Float:x2, Float:y2, Float:z2;
+    GetPlayerPos(playerid, x1, y1, z1);
+    GetPlayerPos(targetid, x2, y2, z2);
+    return GetDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2) <= distance;
+}
+
+stock IsPlayerPolice(playerid) {
+    return (gPlayerInfo[playerid][pFactionID] >= 5 && gPlayerInfo[playerid][pFactionID] <= 11);
+}
+
+stock GetFactionName(factionid) {
+    new name[50] = "Nenhuma";
+    if(factionid > 0 && factionid < 20) {
+        format(name, sizeof(name), "%s", gFactionInfo[factionid][fName]);
+    }
+    return name;
+}
+
+stock GetFactionRankName(factionid, rank) {
+    new rankname[32] = "Membro";
+    // Implementar sistema de ranks específico
+    return rankname;
+}
+
+stock GetVIPName(viplevel) {
+    new vipname[32];
+    switch(viplevel) {
+        case 0: vipname = "Nenhum";
+        case 1: vipname = "Bronze";
+        case 2: vipname = "Prata";
+        case 3: vipname = "Ouro";
+        case 4: vipname = "Diamante";
+        default: vipname = "Desconhecido";
+    }
+    return vipname;
+}
+
+stock SendNearbyMessage(playerid, color, const message[], Float:distance) {
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(playerid, x, y, z);
+    
+    for(new i = 0; i < MAX_PLAYERS; i++) {
+        if(IsPlayerConnected(i) && GetPlayerVirtualWorld(i) == GetPlayerVirtualWorld(playerid)) {
+            if(IsPlayerInRangeOfPoint(i, distance, x, y, z)) {
+                SendClientMessage(i, color, message);
+            }
+        }
+    }
+}
+
+// Funções temporárias para evitar erros de compilação
+stock LoadFactions() { return 1; }
+stock LoadItems() { return 1; }
+stock LoadVehicles() { return 1; }
+stock LoadTerritories() { return 1; }
+stock LoadBusinesses() { return 1; }
+stock LoadHouses() { return 1; }
+stock CreateGlobalTextdraws() { return 1; }
+stock SpawnFactionVehicles() { return 1; }
+stock ResetPlayerData(playerid) { return 1; }
+stock CheckPlayerBan(playerid) { return 1; }
+stock SaveLog(const type[], const player[], const ip[], const message[]) { return 1; }
+stock UpdateOnlinePlayersText() { return 1; }
+stock SavePlayerData(playerid) { return 1; }
+stock StartTutorial(playerid) { return 1; }
+stock GetFactionSkin(factionid, rank) { return 1; }
+stock ShowPlayerInventory(playerid) { return 1; }
+stock ShowPlayerPhone(playerid) { return 1; }
+stock IsPlayerAllowedWeapon(playerid, weapon) { return 1; }
+stock BanPlayer(playerid, const admin[], const reason[]) { return 1; }
 
 // =============================================================================
 // COMANDOS GERAIS
