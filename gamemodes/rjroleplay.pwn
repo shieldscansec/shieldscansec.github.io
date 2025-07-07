@@ -65,14 +65,15 @@
 #define COLOR_LIGHTBLUE 0x33CCFFAA
 #define COLOR_LIGHTGREEN 0x9ACD32AA
 
-// Dialogs
-#define DIALOG_LOGIN 100
-#define DIALOG_REGISTER 101
-#define DIALOG_EMAIL_CONFIRM 102
-#define DIALOG_GPS 103
-#define DIALOG_HELP 104
-#define DIALOG_JOB_AGENCY 105
-#define DIALOG_CITY_HALL 106
+// Dialogs (Mobile Optimized)
+#define DIALOG_MAIN_MENU 100
+#define DIALOG_LOGIN 101
+#define DIALOG_REGISTER_EMAIL 102
+#define DIALOG_REGISTER_PASSWORD 103
+#define DIALOG_GPS 104
+#define DIALOG_HELP 105
+#define DIALOG_JOB_AGENCY 106
+#define DIALOG_CITY_HALL 107
 
 // Login/Register TextDraw IDs (Mobile Optimized)
 #define MAX_LOGIN_TEXTDRAWS 8
@@ -371,19 +372,15 @@ public OnPlayerConnect(playerid) {
     // Resetando dados do player
     ResetPlayerData(playerid);
     
-    // Detectar se é mobile (por limitações, assume mobile por padrão)
-    // Para usar sistema simples, uncommente a linha abaixo:
-    // MostrarLoginSimples(playerid);
-    
-    // Sistema moderno de login/registro (Mobile Optimized)
-    MostrarTelaLogin(playerid);
-    
     // Congelar player na tela de login
     TogglePlayerControllable(playerid, 0);
     
     // Câmera cinematográfica no Cristo Redentor
     SetPlayerCameraPos(playerid, -2000.0, -1600.0, 150.0);
     SetPlayerCameraLookAt(playerid, -2026.0, -1634.0, 140.0);
+    
+    // Sistema automático de login/registro (Mobile Friendly)
+    SetTimerEx("MostrarMenuLogin", 2000, false, "i", playerid);
     
     // Mensagem de boas-vindas
     new string[128];
@@ -476,13 +473,14 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     new idx = 0;
     cmd = strtok(cmdtext, idx);
     
-    // Comando para reabrir tela de login (admin/debug)
+    // Comando para reabrir menu de login (admin/debug)
     if(strcmp("/relogin", cmd, true) == 0) {
         if(gPlayerInfo[playerid][pAdminLevel] < 1) return SendClientMessage(playerid, COLOR_RED, "Comando apenas para administradores!");
-        FecharTelaLogin(playerid);
         gPlayerInfo[playerid][pLogged] = 0;
-        MostrarTelaLogin(playerid);
         TogglePlayerControllable(playerid, 0);
+        SetPlayerCameraPos(playerid, -2000.0, -1600.0, 150.0);
+        SetPlayerCameraLookAt(playerid, -2026.0, -1634.0, 140.0);
+        MostrarMenuLogin(playerid);
         return 1;
     }
     
@@ -825,26 +823,35 @@ stock ProcessarCliqueLogin(playerid, Text:clicked) {
     return 0;
 }
 
-// Sistema de Login Alternativo (Sem TextDraw - Ultra Mobile Friendly)
-stock MostrarLoginSimples(playerid) {
-    GameTextForPlayer(playerid, "~g~RIO DE JANEIRO ROLEPLAY~n~~w~Carregando...", 3000, 1);
+// Sistema automático de login (Timer Function)
+forward MostrarMenuLogin(playerid);
+public MostrarMenuLogin(playerid) {
+    if(!IsPlayerConnected(playerid)) return;
     
-    new string[256];
-    SendClientMessage(playerid, COLOR_GREEN, "====================================");
-    SendClientMessage(playerid, COLOR_GREEN, "   RIO DE JANEIRO ROLEPLAY v1.0");
-    SendClientMessage(playerid, COLOR_GREEN, "====================================");
-    SendClientMessage(playerid, COLOR_WHITE, "");
-    format(string, sizeof(string), "Bem-vindo, {FFFF00}%s{FFFFFF}!", gPlayerInfo[playerid][pName]);
-    SendClientMessage(playerid, COLOR_WHITE, string);
-    SendClientMessage(playerid, COLOR_WHITE, "");
-    SendClientMessage(playerid, COLOR_YELLOW, "➤ Para fazer LOGIN digite: {FFFFFF}/entrar [senha]");
-    SendClientMessage(playerid, COLOR_YELLOW, "➤ Para se REGISTRAR digite: {FFFFFF}/registrar [senha]");
-    SendClientMessage(playerid, COLOR_WHITE, "");
-    SendClientMessage(playerid, COLOR_LIGHTBLUE, "Senha de teste: 123456");
-    SendClientMessage(playerid, COLOR_WHITE, "");
-    SendClientMessage(playerid, COLOR_GREEN, "====================================");
+    new dialogString[512];
+    format(dialogString, sizeof(dialogString), 
+        "{FFFFFF}Bem-vindo ao {00FF00}Rio de Janeiro RolePlay{FFFFFF}!\n\n"
+        "Olá, {FFFF00}%s{FFFFFF}!\n\n"
+        "{FFFFFF}Este é um servidor de roleplay brasileiro\n"
+        "inspirado na cidade maravilhosa do Rio de Janeiro.\n\n"
+        "{FFFF00}• {FFFFFF}Se você já tem uma conta, clique em {00FF00}LOGIN\n"
+        "{FFFF00}• {FFFFFF}Se é novo no servidor, clique em {FF6600}REGISTRAR\n\n"
+        "{CCCCCC}Versão: 1.0 | Players Online: %d",
+        gPlayerInfo[playerid][pName], gPlayersOnline
+    );
     
-    gPlayerInfo[playerid][pLoginScreenActive] = false; // Não usar TextDraw
+    ShowPlayerDialog(playerid, DIALOG_MAIN_MENU, DIALOG_STYLE_MSGBOX,
+        "{00FF00}Rio de Janeiro RolePlay", 
+        dialogString, 
+        "Login", "Registrar");
+}
+
+// Função para kick com delay
+forward KickPlayer(playerid);
+public KickPlayer(playerid) {
+    if(IsPlayerConnected(playerid)) {
+        Kick(playerid);
+    }
 }
 
 // =============================================================================
@@ -889,10 +896,42 @@ public OnPlayerClickTextDraw(playerid, Text:clickedid) {
 }
 
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
-    // Sistema de Login/Registro
-    if(dialogid == DIALOG_LOGIN && response) {
+    // Menu Principal de Login/Registro
+    if(dialogid == DIALOG_MAIN_MENU) {
+        if(response) { // Botão "Login"
+            ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD,
+                "{00FF00}Login - Jogador Existente",
+                "{FFFFFF}Digite sua senha para acessar o servidor:\n\n"
+                "{FFFF00}Para teste use a senha: {FFFFFF}123456\n\n"
+                "{CCCCCC}Se você esqueceu sua senha, desconecte e\n"
+                "escolha a opção 'Registrar' para criar uma nova conta.",
+                "Entrar", "Voltar");
+        } else { // Botão "Registrar"
+            ShowPlayerDialog(playerid, DIALOG_REGISTER_EMAIL, DIALOG_STYLE_INPUT,
+                "{FF6600}Registro - Novo Jogador",
+                "{FFFFFF}Bem-vindo ao Rio de Janeiro RolePlay!\n\n"
+                "Para criar sua conta, digite seu e-mail:\n\n"
+                "{FFFF00}Exemplo: {FFFFFF}seuemail@gmail.com\n\n"
+                "{CCCCCC}O e-mail será usado para recuperação da conta.",
+                "Continuar", "Voltar");
+        }
+        return 1;
+    }
+    
+    // Sistema de Login
+    if(dialogid == DIALOG_LOGIN) {
+        if(!response) { // Botão "Voltar"
+            MostrarMenuLogin(playerid);
+            return 1;
+        }
+        
         if(!strlen(inputtext)) {
-            GameTextForPlayer(playerid, "~r~Senha invalida!", 3000, 3);
+            GameTextForPlayer(playerid, "~r~Digite uma senha!", 3000, 3);
+            ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD,
+                "{00FF00}Login - Senha Necessária",
+                "{FFFFFF}Você precisa digitar uma senha!\n\n"
+                "{FFFF00}Para teste use: {FFFFFF}123456",
+                "Entrar", "Voltar");
             return 1;
         }
         
@@ -903,9 +942,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
             gPlayerInfo[playerid][pBankMoney] = 2000;
             gPlayerInfo[playerid][pLevel] = 1;
             gPlayerInfo[playerid][pHealth] = 100.0;
-            gPlayerInfo[playerid][pSex] = 1; // Masculino
+            gPlayerInfo[playerid][pSex] = 1;
             
-            FecharTelaLogin(playerid);
             TogglePlayerControllable(playerid, 1);
             SetCameraBehindPlayer(playerid);
             
@@ -916,40 +954,80 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
             gPlayerInfo[playerid][pLoginAttempts]++;
             if(gPlayerInfo[playerid][pLoginAttempts] >= 3) {
                 GameTextForPlayer(playerid, "~r~Muitas tentativas incorretas!", 3000, 3);
-                Kick(playerid);
+                SendClientMessage(playerid, COLOR_RED, "Você será desconectado por segurança.");
+                SetTimerEx("KickPlayer", 2000, false, "i", playerid);
             } else {
                 GameTextForPlayer(playerid, "~r~Senha incorreta!", 3000, 3);
+                new attemptString[256];
+                format(attemptString, sizeof(attemptString),
+                    "{FFFFFF}Senha incorreta!\n\n"
+                    "{FF0000}Tentativas restantes: {FFFFFF}%d\n\n"
+                    "{FFFF00}Para teste use: {FFFFFF}123456",
+                    3 - gPlayerInfo[playerid][pLoginAttempts]);
+                ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD,
+                    "{FF0000}Login - Senha Incorreta", attemptString, "Tentar Novamente", "Voltar");
             }
         }
         return 1;
     }
     
-    if(dialogid == DIALOG_EMAIL_CONFIRM && response) {
+    // Primeiro passo do registro (E-mail)
+    if(dialogid == DIALOG_REGISTER_EMAIL) {
+        if(!response) { // Botão "Voltar"
+            MostrarMenuLogin(playerid);
+            return 1;
+        }
+        
         if(!strlen(inputtext)) {
-            GameTextForPlayer(playerid, "~r~E-mail invalido!", 3000, 3);
+            ShowPlayerDialog(playerid, DIALOG_REGISTER_EMAIL, DIALOG_STYLE_INPUT,
+                "{FF6600}Registro - E-mail Obrigatório",
+                "{FFFFFF}Você precisa digitar um e-mail!\n\n"
+                "{FFFF00}Exemplo: {FFFFFF}seuemail@gmail.com",
+                "Continuar", "Voltar");
             return 1;
         }
         
         // Validar formato de e-mail básico
         if(strfind(inputtext, "@", true) == -1 || strfind(inputtext, ".", true) == -1) {
-            GameTextForPlayer(playerid, "~r~Formato de e-mail invalido!", 3000, 3);
-            SendClientMessage(playerid, COLOR_RED, "❌ Use o formato: exemplo@gmail.com");
+            ShowPlayerDialog(playerid, DIALOG_REGISTER_EMAIL, DIALOG_STYLE_INPUT,
+                "{FF0000}Registro - E-mail Inválido",
+                "{FFFFFF}Formato de e-mail inválido!\n\n"
+                "{FFFF00}Use o formato: {FFFFFF}exemplo@gmail.com\n\n"
+                "Digite um e-mail válido:",
+                "Continuar", "Voltar");
             return 1;
         }
         
         format(gPlayerInfo[playerid][pEmail], 64, "%s", inputtext);
         
-        ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_PASSWORD, 
-            "{00FF00}Finalizar Registro", 
-            "{FFFFFF}Agora digite uma senha segura para sua conta:\n\n{FFFF00}• Mínimo 6 caracteres\n• Use letras e números", 
-            "Registrar", "Cancel");
+        ShowPlayerDialog(playerid, DIALOG_REGISTER_PASSWORD, DIALOG_STYLE_PASSWORD,
+            "{FF6600}Registro - Criar Senha",
+            "{FFFFFF}Agora digite uma senha segura para sua conta:\n\n"
+            "{FFFF00}Requisitos:\n"
+            "{FFFFFF}• Mínimo 6 caracteres\n"
+            "• Use letras e números\n"
+            "• Evite senhas óbvias\n\n"
+            "{CCCCCC}Esta senha será usada para fazer login.",
+            "Criar Conta", "Voltar");
         return 1;
     }
     
-    if(dialogid == DIALOG_REGISTER && response) {
+    // Segundo passo do registro (Senha)
+    if(dialogid == DIALOG_REGISTER_PASSWORD) {
+        if(!response) { // Botão "Voltar"
+            ShowPlayerDialog(playerid, DIALOG_REGISTER_EMAIL, DIALOG_STYLE_INPUT,
+                "{FF6600}Registro - Novo Jogador",
+                "{FFFFFF}Digite seu e-mail novamente:",
+                "Continuar", "Voltar");
+            return 1;
+        }
+        
         if(!strlen(inputtext) || strlen(inputtext) < 6) {
-            GameTextForPlayer(playerid, "~r~Senha muito fraca!", 3000, 3);
-            SendClientMessage(playerid, COLOR_RED, "❌ A senha deve ter pelo menos 6 caracteres!");
+            ShowPlayerDialog(playerid, DIALOG_REGISTER_PASSWORD, DIALOG_STYLE_PASSWORD,
+                "{FF0000}Registro - Senha Muito Fraca",
+                "{FFFFFF}A senha deve ter pelo menos 6 caracteres!\n\n"
+                "Digite uma senha mais segura:",
+                "Criar Conta", "Voltar");
             return 1;
         }
         
@@ -959,13 +1037,12 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
         gPlayerInfo[playerid][pBankMoney] = 1000;
         gPlayerInfo[playerid][pLevel] = 1;
         gPlayerInfo[playerid][pHealth] = 100.0;
-        gPlayerInfo[playerid][pSex] = 1; // Padrão masculino
+        gPlayerInfo[playerid][pSex] = 1;
         
-        FecharTelaLogin(playerid);
         TogglePlayerControllable(playerid, 1);
         SetCameraBehindPlayer(playerid);
         
-        GameTextForPlayer(playerid, "~g~Registro realizado com sucesso!", 3000, 1);
+        GameTextForPlayer(playerid, "~g~Conta criada com sucesso!", 3000, 1);
         SendClientMessage(playerid, COLOR_GREEN, "✅ Bem-vindo ao Rio de Janeiro RolePlay!");
         SendClientMessage(playerid, COLOR_YELLOW, "🎯 Sua conta foi criada com sucesso!");
         SpawnPlayer(playerid);
