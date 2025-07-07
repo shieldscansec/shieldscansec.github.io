@@ -865,26 +865,7 @@ stock SendNearbyMessage(playerid, color, const message[], Float:distance) {
     }
 }
 
-// Funções temporárias para evitar erros de compilação
-stock LoadFactions() { return 1; }
-stock LoadItems() { return 1; }
-stock LoadVehicles() { return 1; }
-stock LoadTerritories() { return 1; }
-stock LoadBusinesses() { return 1; }
-stock LoadHouses() { return 1; }
-stock CreateGlobalTextdraws() { return 1; }
-stock SpawnFactionVehicles() { return 1; }
-stock ResetPlayerData(playerid) { return 1; }
-stock CheckPlayerBan(playerid) { return 1; }
-stock SaveLog(const type[], const player[], const ip[], const message[]) { return 1; }
-stock UpdateOnlinePlayersText() { return 1; }
-stock SavePlayerData(playerid) { return 1; }
-stock StartTutorial(playerid) { return 1; }
-stock GetFactionSkin(factionid, rank) { return 1; }
-stock ShowPlayerInventory(playerid) { return 1; }
-stock ShowPlayerPhone(playerid) { return 1; }
-stock IsPlayerAllowedWeapon(playerid, weapon) { return 1; }
-stock BanPlayer(playerid, const admin[], const reason[]) { return 1; }
+
 
 // =============================================================================
 // COMANDOS GERAIS
