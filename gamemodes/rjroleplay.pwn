@@ -11,7 +11,7 @@
 ================================================================================
 */
 
-#include <a_samp>
+#include <a_samp_simple>
 #include <a_mysql>
 #include <sscanf2>
 #include <streamer>
