@@ -127,6 +127,13 @@ public OnGameModeInit() {
     ShowPlayerMarkers(0);
     LimitGlobalChatRadius(20.0);
     
+    // Basic server setup - timer
+    SetTimer("UpdateServer", 1000, true);
+    
+    // Add some vehicles for testing
+    AddStaticVehicleEx(411, 1680.0, -2330.0, 13.5, 0.0, -1, -1, 15); // Infernus at airport
+    AddStaticVehicleEx(522, 1690.0, -2330.0, 13.5, 0.0, -1, -1, 15); // NRG-500
+    
     print("✓ Servidor inicializado com sucesso!");
     print("====================================\n");
     return 1;
@@ -293,20 +300,5 @@ stock ResetPlayerData(playerid) {
 forward UpdateServer();
 public UpdateServer() {
     gServerUptime++;
-    return 1;
-}
-
-// =============================================================================
-// INITIALIZATION
-// =============================================================================
-
-public OnGameModeInit() {
-    // Basic server setup
-    SetTimer("UpdateServer", 1000, true);
-    
-    // Add some vehicles for testing
-    AddStaticVehicleEx(411, 1680.0, -2330.0, 13.5, 0.0, -1, -1, 15); // Infernus at airport
-    AddStaticVehicleEx(522, 1690.0, -2330.0, 13.5, 0.0, -1, -1, 15); // NRG-500
-    
     return 1;
 }
