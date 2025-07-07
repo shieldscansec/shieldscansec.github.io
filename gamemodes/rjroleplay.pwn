@@ -74,8 +74,8 @@
 #define DIALOG_JOB_AGENCY 105
 #define DIALOG_CITY_HALL 106
 
-// Login/Register TextDraw IDs
-#define MAX_LOGIN_TEXTDRAWS 25
+// Login/Register TextDraw IDs (Mobile Optimized)
+#define MAX_LOGIN_TEXTDRAWS 8
 
 // GPS Locations
 #define GPS_AEROPORTO 0
@@ -371,7 +371,11 @@ public OnPlayerConnect(playerid) {
     // Resetando dados do player
     ResetPlayerData(playerid);
     
-    // Sistema moderno de login/registro
+    // Detectar se é mobile (por limitações, assume mobile por padrão)
+    // Para usar sistema simples, uncommente a linha abaixo:
+    // MostrarLoginSimples(playerid);
+    
+    // Sistema moderno de login/registro (Mobile Optimized)
     MostrarTelaLogin(playerid);
     
     // Congelar player na tela de login
@@ -694,161 +698,89 @@ stock MostrarTelaLogin(playerid) {
     gPlayerInfo[playerid][pLoginScreenActive] = true;
     gPlayerInfo[playerid][pRegisterMode] = false;
     
-    // Fundo principal (dividido ao meio)
-    gPlayerInfo[playerid][pLoginTD][0] = TextDrawCreate(80.0, 120.0, "box"); // Lado esquerdo (registro)
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][0], 0.0, 25.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][0], 320.0, 0.0);
+    // Fundo principal simples (Mobile Optimized)
+    gPlayerInfo[playerid][pLoginTD][0] = TextDrawCreate(160.0, 140.0, "box");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][0], 0.0, 20.0);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][0], 480.0, 0.0);
     TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][0], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][0], 0xFFFFFF99); // Branco semi-transparente
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][0], 0x000000AA); // Fundo escuro semi-transparente
     TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][0], 0);
     
-    gPlayerInfo[playerid][pLoginTD][1] = TextDrawCreate(320.0, 120.0, "box"); // Lado direito (login)
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][1], 0.0, 25.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][1], 560.0, 0.0);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][1], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][1], 0x87CEEBAA); // Azul claro semi-transparente
+    // Título principal 
+    gPlayerInfo[playerid][pLoginTD][1] = TextDrawCreate(320.0, 150.0, "~g~RIO DE JANEIRO ~w~ROLEPLAY");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][1], 0.4, 1.8);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][1], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][1], -1);
+    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTD][1], 1);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][1], 1);
     TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][1], 0);
     
-    // Título principal
-    gPlayerInfo[playerid][pLoginTD][2] = TextDrawCreate(320.0, 90.0, "~g~RIO DE JANEIRO ~w~ROLEPLAY");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][2], 0.5, 2.5);
+    // Nome do jogador
+    new welcomeText[128];
+    format(welcomeText, sizeof(welcomeText), "~w~Bem-vindo, ~y~%s~w~!", gPlayerInfo[playerid][pName]);
+    gPlayerInfo[playerid][pLoginTD][2] = TextDrawCreate(320.0, 180.0, welcomeText);
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][2], 0.3, 1.5);
     TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][2], 2);
     TextDrawColor(gPlayerInfo[playerid][pLoginTD][2], -1);
-    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTD][2], 2);
+    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTD][2], 1);
     TextDrawFont(gPlayerInfo[playerid][pLoginTD][2], 1);
     TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][2], 0);
     
-    // Seção REGISTRO (lado esquerdo)
-    gPlayerInfo[playerid][pLoginTD][3] = TextDrawCreate(200.0, 130.0, "~w~Registration");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][3], 0.4, 1.8);
+    // Instruções
+    gPlayerInfo[playerid][pLoginTD][3] = TextDrawCreate(320.0, 210.0, "~w~Escolha uma opcao abaixo:");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][3], 0.25, 1.2);
     TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][3], 2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][3], 0x333333FF);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][3], -1);
+    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTD][3], 1);
     TextDrawFont(gPlayerInfo[playerid][pLoginTD][3], 1);
     TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][3], 0);
     
-    // Campos do registro
-    gPlayerInfo[playerid][pLoginTD][4] = TextDrawCreate(90.0, 160.0, "~w~Nome:");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][4], 0.25, 1.2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][4], 0x333333FF);
+    // Botão REGISTRAR
+    gPlayerInfo[playerid][pLoginTD][4] = TextDrawCreate(250.0, 250.0, "~w~REGISTRAR");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][4], 0.35, 1.6);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][4], 320.0, 15.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][4], 2);
+    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][4], 1);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][4], 0x00AA00FF); // Verde
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][4], 0xFFFFFFFF);
     TextDrawFont(gPlayerInfo[playerid][pLoginTD][4], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][4], 0);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][4], 1);
     
-    new nameBox[64];
-    format(nameBox, sizeof(nameBox), "~w~%s", gPlayerInfo[playerid][pName]);
-    gPlayerInfo[playerid][pLoginTD][5] = TextDrawCreate(90.0, 175.0, nameBox);
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][5], 0.25, 1.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][5], 310.0, 10.0);
+    // Botão LOGIN
+    gPlayerInfo[playerid][pLoginTD][5] = TextDrawCreate(390.0, 250.0, "~w~LOGIN");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][5], 0.35, 1.6);
+    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][5], 460.0, 15.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][5], 2);
     TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][5], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][5], 0xFFFFFFCC);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][5], 0x000000FF);
+    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][5], 0x0066CCFF); // Azul
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][5], 0xFFFFFFFF);
     TextDrawFont(gPlayerInfo[playerid][pLoginTD][5], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][5], 0);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][5], 1);
     
-    gPlayerInfo[playerid][pLoginTD][6] = TextDrawCreate(90.0, 200.0, "~w~E-mail:");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][6], 0.25, 1.2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][6], 0x333333FF);
+    // Dica para mobile
+    gPlayerInfo[playerid][pLoginTD][6] = TextDrawCreate(320.0, 290.0, "~y~Toque no botao desejado");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][6], 0.2, 1.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][6], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][6], -1);
+    TextDrawSetOutline(gPlayerInfo[playerid][pLoginTD][6], 1);
     TextDrawFont(gPlayerInfo[playerid][pLoginTD][6], 1);
     TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][6], 0);
     
-    gPlayerInfo[playerid][pLoginTD][7] = TextDrawCreate(90.0, 215.0, "~w~Digite seu e-mail...");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][7], 0.25, 1.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][7], 310.0, 10.0);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][7], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][7], 0xFFFFFFCC);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][7], 0x888888FF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][7], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][7], 1);
-    
-    gPlayerInfo[playerid][pLoginTD][8] = TextDrawCreate(90.0, 240.0, "~w~Senha:");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][8], 0.25, 1.2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][8], 0x333333FF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][8], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][8], 0);
-    
-    gPlayerInfo[playerid][pLoginTD][9] = TextDrawCreate(90.0, 255.0, "~w~Digite sua senha...");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][9], 0.25, 1.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][9], 310.0, 10.0);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][9], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][9], 0xFFFFFFCC);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][9], 0x888888FF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][9], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][9], 1);
-    
-    // Botão REGISTRAR
-    gPlayerInfo[playerid][pLoginTD][10] = TextDrawCreate(200.0, 290.0, "~w~Register");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][10], 0.35, 1.5);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][10], 280.0, 15.0);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][10], 2);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][10], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][10], 0x87CEEBFF); // Azul claro
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][10], 0xFFFFFFFF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][10], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][10], 1);
-    
-    // Seção LOGIN (lado direito)
-    gPlayerInfo[playerid][pLoginTD][11] = TextDrawCreate(440.0, 130.0, "~w~Welcome Back!");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][11], 0.4, 1.8);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][11], 2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][11], 0xFFFFFFFF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][11], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][11], 0);
-    
-    // Campos do login
-    gPlayerInfo[playerid][pLoginTD][12] = TextDrawCreate(330.0, 160.0, "~w~Nome:");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][12], 0.25, 1.2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][12], 0xFFFFFFFF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][12], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][12], 0);
-    
-    gPlayerInfo[playerid][pLoginTD][13] = TextDrawCreate(330.0, 175.0, nameBox);
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][13], 0.25, 1.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][13], 550.0, 10.0);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][13], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][13], 0xFFFFFFCC);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][13], 0x000000FF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][13], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][13], 0);
-    
-    gPlayerInfo[playerid][pLoginTD][14] = TextDrawCreate(330.0, 210.0, "~w~Senha:");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][14], 0.25, 1.2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][14], 0xFFFFFFFF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][14], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][14], 0);
-    
-    gPlayerInfo[playerid][pLoginTD][15] = TextDrawCreate(330.0, 225.0, "~w~Digite sua senha...");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][15], 0.25, 1.0);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][15], 550.0, 10.0);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][15], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][15], 0xFFFFFFCC);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][15], 0x888888FF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][15], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][15], 1);
-    
-    // Botão LOGIN
-    gPlayerInfo[playerid][pLoginTD][16] = TextDrawCreate(440.0, 270.0, "~w~Login");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][16], 0.35, 1.5);
-    TextDrawTextSize(gPlayerInfo[playerid][pLoginTD][16], 520.0, 15.0);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][16], 2);
-    TextDrawUseBox(gPlayerInfo[playerid][pLoginTD][16], 1);
-    TextDrawBoxColor(gPlayerInfo[playerid][pLoginTD][16], 0xFFFFFFFF); // Branco
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][16], 0x333333FF);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][16], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][16], 1);
-    
     // Rodapé
-    gPlayerInfo[playerid][pLoginTD][17] = TextDrawCreate(320.0, 330.0, "~w~Created by ~g~Orion ~w~Development Team");
-    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][17], 0.2, 1.0);
-    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][17], 2);
-    TextDrawColor(gPlayerInfo[playerid][pLoginTD][17], 0xFFFFFFAA);
-    TextDrawFont(gPlayerInfo[playerid][pLoginTD][17], 1);
-    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][17], 0);
+    gPlayerInfo[playerid][pLoginTD][7] = TextDrawCreate(320.0, 320.0, "~w~RJ RolePlay ~g~v1.0");
+    TextDrawLetterSize(gPlayerInfo[playerid][pLoginTD][7], 0.2, 1.0);
+    TextDrawAlignment(gPlayerInfo[playerid][pLoginTD][7], 2);
+    TextDrawColor(gPlayerInfo[playerid][pLoginTD][7], 0xAAAAAAAA);
+    TextDrawFont(gPlayerInfo[playerid][pLoginTD][7], 1);
+    TextDrawSetSelectable(gPlayerInfo[playerid][pLoginTD][7], 0);
     
     // Mostrar todas as TextDraws
-    for(new i = 0; i < 18; i++) {
+    for(new i = 0; i < MAX_LOGIN_TEXTDRAWS; i++) {
         TextDrawShowForPlayer(playerid, gPlayerInfo[playerid][pLoginTD][i]);
     }
     
-    SelectTextDraw(playerid, 0x87CEEBFF);
+    // Ativar modo de seleção (mobile friendly)
+    SelectTextDraw(playerid, 0x33AA33FF);
 }
 
 stock MostrarTelaRegistro(playerid) {
@@ -872,52 +804,47 @@ stock FecharTelaLogin(playerid) {
 }
 
 stock ProcessarCliqueLogin(playerid, Text:clicked) {
-    // Botão Register
-    if(clicked == gPlayerInfo[playerid][pLoginTD][10]) {
+    // Botão REGISTRAR (Verde)
+    if(clicked == gPlayerInfo[playerid][pLoginTD][4]) {
         ShowPlayerDialog(playerid, DIALOG_EMAIL_CONFIRM, DIALOG_STYLE_INPUT, 
-            "{FF0000}Confirmação de E-mail", 
-            "{FFFFFF}Digite seu endereço de e-mail para confirmar o registro:\n\n{FFFF00}Exemplo: luisrafael@gmail.com", 
-            "Confirm", "Cancel");
+            "{00AA00}Registro - Novo Jogador", 
+            "{FFFFFF}Digite seu endereço de e-mail para criar uma conta:\n\n{FFFF00}Exemplo: seuemail@gmail.com\n{CCCCCC}O e-mail será usado para recuperação da conta.", 
+            "Confirmar", "Cancelar");
         return 1;
     }
     
-    // Botão Login
-    if(clicked == gPlayerInfo[playerid][pLoginTD][16]) {
+    // Botão LOGIN (Azul)
+    if(clicked == gPlayerInfo[playerid][pLoginTD][5]) {
         ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD, 
-            "{00FF00}Fazer Login", 
-            "{FFFFFF}Digite sua senha para acessar o servidor:", 
-            "Entrar", "Cancel");
-        return 1;
-    }
-    
-    // Campo de e-mail (registro)
-    if(clicked == gPlayerInfo[playerid][pLoginTD][7]) {
-        ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_INPUT, 
-            "{00FF00}Registro - E-mail", 
-            "{FFFFFF}Digite seu e-mail:", 
-            "OK", "Cancel");
-        return 1;
-    }
-    
-    // Campo de senha (registro)
-    if(clicked == gPlayerInfo[playerid][pLoginTD][9]) {
-        ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_PASSWORD, 
-            "{00FF00}Registro - Senha", 
-            "{FFFFFF}Digite sua senha:", 
-            "OK", "Cancel");
-        return 1;
-    }
-    
-    // Campo de senha (login)
-    if(clicked == gPlayerInfo[playerid][pLoginTD][15]) {
-        ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD, 
-            "{00FF00}Fazer Login", 
-            "{FFFFFF}Digite sua senha:", 
-            "Entrar", "Cancel");
+            "{0066CC}Login - Jogador Existente", 
+            "{FFFFFF}Digite sua senha para acessar o servidor:\n\n{FFFF00}Senha padrão para teste: 123456", 
+            "Entrar", "Cancelar");
         return 1;
     }
     
     return 0;
+}
+
+// Sistema de Login Alternativo (Sem TextDraw - Ultra Mobile Friendly)
+stock MostrarLoginSimples(playerid) {
+    GameTextForPlayer(playerid, "~g~RIO DE JANEIRO ROLEPLAY~n~~w~Carregando...", 3000, 1);
+    
+    new string[256];
+    SendClientMessage(playerid, COLOR_GREEN, "====================================");
+    SendClientMessage(playerid, COLOR_GREEN, "   RIO DE JANEIRO ROLEPLAY v1.0");
+    SendClientMessage(playerid, COLOR_GREEN, "====================================");
+    SendClientMessage(playerid, COLOR_WHITE, "");
+    format(string, sizeof(string), "Bem-vindo, {FFFF00}%s{FFFFFF}!", gPlayerInfo[playerid][pName]);
+    SendClientMessage(playerid, COLOR_WHITE, string);
+    SendClientMessage(playerid, COLOR_WHITE, "");
+    SendClientMessage(playerid, COLOR_YELLOW, "➤ Para fazer LOGIN digite: {FFFFFF}/entrar [senha]");
+    SendClientMessage(playerid, COLOR_YELLOW, "➤ Para se REGISTRAR digite: {FFFFFF}/registrar [senha]");
+    SendClientMessage(playerid, COLOR_WHITE, "");
+    SendClientMessage(playerid, COLOR_LIGHTBLUE, "Senha de teste: 123456");
+    SendClientMessage(playerid, COLOR_WHITE, "");
+    SendClientMessage(playerid, COLOR_GREEN, "====================================");
+    
+    gPlayerInfo[playerid][pLoginScreenActive] = false; // Não usar TextDraw
 }
 
 // =============================================================================
