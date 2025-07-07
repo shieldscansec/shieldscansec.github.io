@@ -1,0 +1,44 @@
+{
+  "name": "rj-roleplay-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord bot para o servidor SA-MP Rio de Janeiro RolePlay",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
+    "install-deps": "npm install"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "samp",
+    "roleplay",
+    "rio-de-janeiro",
+    "gaming"
+  ],
+  "author": "Rio de Janeiro RolePlay Team",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.13.0",
+    "mysql2": "^3.6.0",
+    "axios": "^1.5.0",
+    "qrcode": "^1.5.3",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.2",
+    "moment": "^2.29.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rjroleplay/discord-bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rjroleplay/discord-bot/issues"
+  },
+  "homepage": "https://rjroleplay.com.br"
+}
