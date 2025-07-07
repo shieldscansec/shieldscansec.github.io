@@ -64,6 +64,7 @@
 #define COLOR_GREY 0x808080FF
 #define COLOR_LIGHTBLUE 0x33CCFFAA
 #define COLOR_LIGHTGREEN 0x9ACD32AA
+#define COLOR_PURPLE 0x800080FF
 
 // Dialogs (Mobile Optimized)
 #define DIALOG_MAIN_MENU 100
@@ -515,16 +516,17 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     
     // Stats Command
     if(strcmp("/stats", cmd, true) == 0) {
-        format(string, sizeof(string), 
-            "=== ESTATÍSTICAS DO PLAYER ===\n\
-            Nome: %s\n\
-            Level: %d\n\
-            Dinheiro: R$ %d\n\
-            Banco: R$ %d\n\
-            Emprego: %s\n\
-            Facção: %d\n\
-            Admin: %d\n\
-            VIP: %d", 
+        new statsString[512];
+        format(statsString, sizeof(statsString), 
+            "=== ESTATISTICAS DO PLAYER ===\n\n"
+            "Nome: %s\n"
+            "Level: %d\n"
+            "Dinheiro: R$ %d\n"
+            "Banco: R$ %d\n"
+            "Emprego: %s\n"
+            "Faccao: %d\n"
+            "Admin: %d\n"
+            "VIP: %d", 
             gPlayerInfo[playerid][pName], 
             gPlayerInfo[playerid][pLevel], 
             gPlayerInfo[playerid][pMoney], 
@@ -534,7 +536,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
             gPlayerInfo[playerid][pAdminLevel], 
             gPlayerInfo[playerid][pVIPLevel]
         );
-        ShowPlayerDialog(playerid, 1000, DIALOG_STYLE_MSGBOX, "Suas Estatísticas", string, "Fechar", "");
+        ShowPlayerDialog(playerid, 1000, DIALOG_STYLE_MSGBOX, "Suas Estatisticas", statsString, "Fechar", "");
         return 1;
     }
     
@@ -804,7 +806,7 @@ stock FecharTelaLogin(playerid) {
 stock ProcessarCliqueLogin(playerid, Text:clicked) {
     // Botão REGISTRAR (Verde)
     if(clicked == gPlayerInfo[playerid][pLoginTD][4]) {
-        ShowPlayerDialog(playerid, DIALOG_EMAIL_CONFIRM, DIALOG_STYLE_INPUT, 
+        ShowPlayerDialog(playerid, DIALOG_REGISTER_EMAIL, DIALOG_STYLE_INPUT, 
             "{00AA00}Registro - Novo Jogador", 
             "{FFFFFF}Digite seu endereço de e-mail para criar uma conta:\n\n{FFFF00}Exemplo: seuemail@gmail.com\n{CCCCCC}O e-mail será usado para recuperação da conta.", 
             "Confirmar", "Cancelar");
