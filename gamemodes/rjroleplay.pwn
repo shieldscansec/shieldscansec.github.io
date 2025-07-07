@@ -761,7 +761,9 @@ stock CheckHealthHack(playerid) {
     return 1;
 }
 
-// Continuando na próxima parte...
+// =============================================================================
+// DEFINES DOS DIALOGS
+// =============================================================================
 
 #define DIALOG_LOGIN 1
 #define DIALOG_REGISTER 2
@@ -773,3 +775,507 @@ stock CheckHealthHack(playerid) {
 #define DIALOG_CRAFT 8
 #define DIALOG_BUSINESS 9
 #define DIALOG_HOUSE 10
+#define DIALOG_STATS 11
+#define DIALOG_RG 12
+#define DIALOG_CNH 13
+#define DIALOG_PORTE 14
+#define DIALOG_REVISTA 15
+#define DIALOG_COIN_SHOP 16
+
+// =============================================================================
+// COMANDOS GERAIS
+// =============================================================================
+
+CMD:stats(playerid, params[]) {
+    if(!gPlayerInfo[playerid][pLogged]) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa estar logado!");
+    
+    new string[1024];
+    format(string, sizeof(string),
+        "{FFFFFF}════════ {00FF00}ESTATÍSTICAS{FFFFFF} ════════\n\n"
+        "{FFFFFF}Nome: {FFFF00}%s\n"
+        "{FFFFFF}Level: {FFFF00}%d {FFFFFF}| EXP: {FFFF00}%d\n"
+        "{FFFFFF}Dinheiro: {00FF00}R$ %s\n"
+        "{FFFFFF}Banco: {00FF00}R$ %s\n"
+        "{FFFFFF}Idade: {FFFF00}%d anos\n"
+        "{FFFFFF}Sexo: {FFFF00}%s\n"
+        "{FFFFFF}CPF: {FFFF00}%s\n"
+        "{FFFFFF}RG: {FFFF00}%s\n"
+        "{FFFFFF}CNH: {FFFF00}%s\n"
+        "{FFFFFF}Porte de Arma: {FFFF00}%s\n"
+        "{FFFFFF}Celular: {FFFF00}%s\n"
+        "{FFFFFF}Facção: {FFFF00}%s\n"
+        "{FFFFFF}Cargo: {FFFF00}%s\n"
+        "{FFFFFF}VIP: {FFFF00}%s\n"
+        "{FFFFFF}Coins: {FFFF00}%d\n"
+        "{FFFFFF}Tempo jogado: {FFFF00}%d horas",
+        gPlayerInfo[playerid][pName],
+        gPlayerInfo[playerid][pLevel],
+        gPlayerInfo[playerid][pExp],
+        FormatNumber(gPlayerInfo[playerid][pMoney]),
+        FormatNumber(gPlayerInfo[playerid][pBankMoney]),
+        gPlayerInfo[playerid][pAge],
+        (gPlayerInfo[playerid][pSex] == 0) ? "Masculino" : "Feminino",
+        gPlayerInfo[playerid][pCPF],
+        gPlayerInfo[playerid][pRG],
+        (gPlayerInfo[playerid][pCNH]) ? "Sim" : "Não",
+        (gPlayerInfo[playerid][pWeaponLicense]) ? "Sim" : "Não",
+        gPlayerInfo[playerid][pPhoneNumber],
+        GetFactionName(gPlayerInfo[playerid][pFactionID]),
+        GetFactionRankName(gPlayerInfo[playerid][pFactionID], gPlayerInfo[playerid][pFactionRank]),
+        GetVIPName(gPlayerInfo[playerid][pVIPLevel]),
+        gPlayerInfo[playerid][pCoins],
+        gPlayerInfo[playerid][pTotalHours]
+    );
+    
+    ShowPlayerDialog(playerid, DIALOG_STATS, DIALOG_STYLE_MSGBOX, "{00FF00}Estatísticas", string, "Fechar", "");
+    return 1;
+}
+
+CMD:inventario(playerid, params[]) {
+    if(!gPlayerInfo[playerid][pLogged]) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa estar logado!");
+    
+    ShowPlayerInventory(playerid);
+    return 1;
+}
+
+CMD:celular(playerid, params[]) {
+    if(!gPlayerInfo[playerid][pLogged]) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa estar logado!");
+    
+    ShowPlayerPhone(playerid);
+    return 1;
+}
+
+CMD:rg(playerid, params[]) {
+    new targetid;
+    if(sscanf(params, "u", targetid)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /rg [id/nome]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    if(!IsPlayerNearPlayer(playerid, targetid, 5.0)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador muito longe!");
+    
+    new string[256];
+    format(string, sizeof(string), 
+        "{FFFFFF}═══════ {00FF00}DOCUMENTO DE IDENTIDADE{FFFFFF} ═══════\n\n"
+        "{FFFFFF}Nome: {FFFF00}%s\n"
+        "{FFFFFF}RG: {FFFF00}%s\n"
+        "{FFFFFF}CPF: {FFFF00}%s\n"
+        "{FFFFFF}Idade: {FFFF00}%d anos\n"
+        "{FFFFFF}Sexo: {FFFF00}%s",
+        gPlayerInfo[targetid][pName],
+        gPlayerInfo[targetid][pRG],
+        gPlayerInfo[targetid][pCPF],
+        gPlayerInfo[targetid][pAge],
+        (gPlayerInfo[targetid][pSex] == 0) ? "Masculino" : "Feminino"
+    );
+    
+    ShowPlayerDialog(playerid, DIALOG_RG, DIALOG_STYLE_MSGBOX, "{00FF00}Documento de Identidade", string, "Fechar", "");
+    
+    format(string, sizeof(string), "* %s mostra o RG para %s", GetPlayerNameEx(playerid), GetPlayerNameEx(targetid));
+    SendNearbyMessage(playerid, COLOR_PURPLE, string, 10.0);
+    
+    return 1;
+}
+
+// =============================================================================
+// COMANDOS DAS FACÇÕES POLICIAIS
+// =============================================================================
+
+CMD:prender(playerid, params[]) {
+    if(!IsPlayerPolice(playerid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não é policial!");
+    
+    new targetid, tempo, motivo[128];
+    if(sscanf(params, "uis[128]", targetid, tempo, motivo)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /prender [id] [tempo(min)] [motivo]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    if(!IsPlayerNearPlayer(playerid, targetid, 5.0)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador muito longe!");
+    if(tempo < 1 || tempo > 60) return SendClientMessage(playerid, COLOR_RED, "ERRO: Tempo deve ser entre 1 e 60 minutos!");
+    
+    // Algemas primeiro
+    if(!GetPVarInt(targetid, "Algemado")) return SendClientMessage(playerid, COLOR_RED, "ERRO: O suspeito deve estar algemado primeiro! Use /algemar");
+    
+    gPlayerInfo[targetid][pJailTime] = tempo;
+    SetPlayerPos(targetid, 264.6288, 77.5742, 1001.0394); // Cadeia
+    SetPlayerInterior(targetid, 6);
+    SetPlayerVirtualWorld(targetid, 1);
+    
+    ResetPlayerWeapons(targetid);
+    SetPlayerHealth(targetid, 100.0);
+    
+    new string[256];
+    format(string, sizeof(string), "POLÍCIA: %s prendeu %s por %d minutos. Motivo: %s", 
+        GetPlayerNameEx(playerid), GetPlayerNameEx(targetid), tempo, motivo);
+    SendClientMessageToAll(COLOR_BLUE, string);
+    
+    format(string, sizeof(string), "Você foi preso por %s. Tempo: %d minutos | Motivo: %s", 
+        GetPlayerNameEx(playerid), tempo, motivo);
+    SendClientMessage(targetid, COLOR_RED, string);
+    
+    // Log
+    format(string, sizeof(string), "%s prendeu %s por %d min. Motivo: %s", 
+        GetPlayerNameEx(playerid), GetPlayerNameEx(targetid), tempo, motivo);
+    SaveLog("prison", GetPlayerNameEx(playerid), GetPlayerIPEx(playerid), string);
+    
+    DeletePVar(targetid, "Algemado");
+    return 1;
+}
+
+CMD:algemar(playerid, params[]) {
+    if(!IsPlayerPolice(playerid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não é policial!");
+    
+    new targetid;
+    if(sscanf(params, "u", targetid)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /algemar [id]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    if(!IsPlayerNearPlayer(playerid, targetid, 3.0)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador muito longe!");
+    if(playerid == targetid) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não pode algemar a si mesmo!");
+    
+    if(GetPVarInt(targetid, "Algemado")) {
+        // Desalgemar
+        TogglePlayerControllable(targetid, 1);
+        DeletePVar(targetid, "Algemado");
+        
+        new string[128];
+        format(string, sizeof(string), "* %s desalgema %s", GetPlayerNameEx(playerid), GetPlayerNameEx(targetid));
+        SendNearbyMessage(playerid, COLOR_PURPLE, string, 10.0);
+        
+        SendClientMessage(targetid, COLOR_GREEN, "Você foi desalgemado!");
+    } else {
+        // Algemar
+        TogglePlayerControllable(targetid, 0);
+        SetPVarInt(targetid, "Algemado", 1);
+        
+        new string[128];
+        format(string, sizeof(string), "* %s algema %s", GetPlayerNameEx(playerid), GetPlayerNameEx(targetid));
+        SendNearbyMessage(playerid, COLOR_PURPLE, string, 10.0);
+        
+        SendClientMessage(targetid, COLOR_RED, "Você foi algemado!");
+    }
+    
+    return 1;
+}
+
+CMD:revistar(playerid, params[]) {
+    if(!IsPlayerPolice(playerid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não é policial!");
+    
+    new targetid;
+    if(sscanf(params, "u", targetid)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /revistar [id]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    if(!IsPlayerNearPlayer(playerid, targetid, 3.0)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador muito longe!");
+    
+    new string[512];
+    new foundItems[256] = "Nenhum item encontrado";
+    new foundWeapons[256] = "Nenhuma arma encontrada";
+    new foundMoney[32];
+    
+    // Verificar dinheiro
+    format(foundMoney, sizeof(foundMoney), "R$ %s", FormatNumber(gPlayerInfo[targetid][pMoney]));
+    
+    // Verificar armas
+    new weaponStr[128] = "";
+    for(new i = 0; i < 13; i++) {
+        new weapon, ammo;
+        GetPlayerWeaponData(targetid, i, weapon, ammo);
+        if(weapon > 0) {
+            new weaponName[32];
+            GetWeaponName(weapon, weaponName, sizeof(weaponName));
+            if(strlen(weaponStr) > 0) strcat(weaponStr, ", ");
+            format(weaponStr, sizeof(weaponStr), "%s%s (%d munições)", weaponStr, weaponName, ammo);
+        }
+    }
+    if(strlen(weaponStr) > 0) foundWeapons = weaponStr;
+    
+    format(string, sizeof(string),
+        "{FFFFFF}════════ {FF0000}RESULTADO DA REVISTA{FFFFFF} ════════\n\n"
+        "{FFFFFF}Suspeito: {FFFF00}%s\n"
+        "{FFFFFF}Dinheiro: {00FF00}%s\n"
+        "{FFFFFF}Armas: {FF0000}%s\n"
+        "{FFFFFF}Itens ilegais: {FF8000}%s",
+        GetPlayerNameEx(targetid),
+        foundMoney,
+        foundWeapons,
+        foundItems
+    );
+    
+    ShowPlayerDialog(playerid, DIALOG_REVISTA, DIALOG_STYLE_MSGBOX, "{FF0000}Resultado da Revista", string, "Fechar", "");
+    
+    format(string, sizeof(string), "* %s revista %s", GetPlayerNameEx(playerid), GetPlayerNameEx(targetid));
+    SendNearbyMessage(playerid, COLOR_PURPLE, string, 10.0);
+    
+    return 1;
+}
+
+// =============================================================================
+// COMANDOS CRIMINOSOS
+// =============================================================================
+
+CMD:dominar(playerid, params[]) {
+    if(!IsPlayerCriminal(playerid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não é de uma facção criminosa!");
+    if(gPlayerInfo[playerid][pFactionRank] < 5) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa ser no mínimo Soldado!");
+    
+    new territoryID = GetPlayerTerritory(playerid);
+    if(territoryID == -1) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não está em um território!");
+    
+    if(gTerritoryInfo[territoryID][tFactionID] == gPlayerInfo[playerid][pFactionID]) {
+        return SendClientMessage(playerid, COLOR_RED, "ERRO: Sua facção já domina este território!");
+    }
+    
+    // Iniciar guerra de território
+    new string[128];
+    format(string, sizeof(string), "GUERRA: %s (%s) está tentando dominar o território %s!", 
+        GetPlayerNameEx(playerid), 
+        GetFactionName(gPlayerInfo[playerid][pFactionID]),
+        gTerritoryInfo[territoryID][tName]
+    );
+    SendClientMessageToAll(COLOR_RED, string);
+    
+    SetPVarInt(playerid, "DominandoTerritorio", territoryID);
+    SetPVarInt(playerid, "TempoDominacao", 300); // 5 minutos
+    
+    return 1;
+}
+
+CMD:drogas(playerid, params[]) {
+    if(!gPlayerInfo[playerid][pLogged]) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa estar logado!");
+    
+    new action[32], quantity;
+    if(sscanf(params, "s[32]i", action, quantity)) {
+        SendClientMessage(playerid, COLOR_YELLOW, "USO: /drogas [produzir/vender] [quantidade]");
+        return 1;
+    }
+    
+    if(!strcmp(action, "produzir", true)) {
+        if(!IsPlayerCriminal(playerid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não é de uma facção criminosa!");
+        
+        new territoryID = GetPlayerTerritory(playerid);
+        if(territoryID == -1) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não está em um território!");
+        if(gTerritoryInfo[territoryID][tFactionID] != gPlayerInfo[playerid][pFactionID]) {
+            return SendClientMessage(playerid, COLOR_RED, "ERRO: Sua facção não domina este território!");
+        }
+        
+        new string[128];
+        format(string, sizeof(string), "Você produziu %d unidades de droga!", quantity);
+        SendClientMessage(playerid, COLOR_GREEN, string);
+        
+    } else if(!strcmp(action, "vender", true)) {
+        new price = quantity * (500 + random(300)); // R$ 500-800 por unidade
+        GivePlayerMoney(playerid, price);
+        
+        new string[128];
+        format(string, sizeof(string), "Você vendeu %d unidades de droga por R$ %s!", quantity, FormatNumber(price));
+        SendClientMessage(playerid, COLOR_GREEN, string);
+        
+        // Chance de polícia descobrir
+        if(random(100) < 20) { // 20% de chance
+            SendClientMessage(playerid, COLOR_RED, "ALERTA: Alguém te denunciou para a polícia!");
+            gPlayerInfo[playerid][pWantedLevel] += 2;
+        }
+    }
+    
+    return 1;
+}
+
+// =============================================================================
+// COMANDOS ADMINISTRATIVOS
+// =============================================================================
+
+CMD:ban(playerid, params[]) {
+    if(gPlayerInfo[playerid][pAdminLevel] < 2) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não tem permissão!");
+    
+    new targetid, motivo[128];
+    if(sscanf(params, "us[128]", targetid, motivo)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /ban [id] [motivo]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    
+    BanPlayer(targetid, GetPlayerNameEx(playerid), motivo);
+    
+    new string[256];
+    format(string, sizeof(string), "ADMIN: %s baniu %s. Motivo: %s", 
+        GetPlayerNameEx(playerid), GetPlayerNameEx(targetid), motivo);
+    SendClientMessageToAll(COLOR_RED, string);
+    
+    return 1;
+}
+
+CMD:kick(playerid, params[]) {
+    if(gPlayerInfo[playerid][pAdminLevel] < 1) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não tem permissão!");
+    
+    new targetid, motivo[128];
+    if(sscanf(params, "us[128]", targetid, motivo)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /kick [id] [motivo]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    
+    new string[256];
+    format(string, sizeof(string), "ADMIN: %s kickou %s. Motivo: %s", 
+        GetPlayerNameEx(playerid), GetPlayerNameEx(targetid), motivo);
+    SendClientMessageToAll(COLOR_RED, string);
+    
+    SendClientMessage(targetid, COLOR_RED, "Você foi kickado do servidor!");
+    SetTimerEx("DelayedKick", 1000, false, "i", targetid);
+    
+    return 1;
+}
+
+CMD:goto(playerid, params[]) {
+    if(gPlayerInfo[playerid][pAdminLevel] < 1) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você não tem permissão!");
+    
+    new targetid;
+    if(sscanf(params, "u", targetid)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /goto [id]");
+    if(!IsPlayerConnected(targetid)) return SendClientMessage(playerid, COLOR_RED, "ERRO: Jogador não encontrado!");
+    
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(targetid, x, y, z);
+    SetPlayerPos(playerid, x + 1.0, y + 1.0, z);
+    SetPlayerInterior(playerid, GetPlayerInterior(targetid));
+    SetPlayerVirtualWorld(playerid, GetPlayerVirtualWorld(targetid));
+    
+    new string[128];
+    format(string, sizeof(string), "Você foi até %s", GetPlayerNameEx(targetid));
+    SendClientMessage(playerid, COLOR_GREEN, string);
+    
+    return 1;
+}
+
+// =============================================================================
+// COMANDOS VIP
+// =============================================================================
+
+CMD:vcar(playerid, params[]) {
+    if(gPlayerInfo[playerid][pVIPLevel] < 1) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa ser VIP!");
+    
+    new modelid;
+    if(sscanf(params, "i", modelid)) return SendClientMessage(playerid, COLOR_YELLOW, "USO: /vcar [model id]");
+    if(modelid < 400 || modelid > 611) return SendClientMessage(playerid, COLOR_RED, "ERRO: Model ID inválido!");
+    
+    new Float:x, Float:y, Float:z, Float:angle;
+    GetPlayerPos(playerid, x, y, z);
+    GetPlayerFacingAngle(playerid, angle);
+    
+    new vehicleid = CreateVehicle(modelid, x + 3.0, y, z + 1.0, angle, -1, -1, -1);
+    SetVehicleVirtualWorld(vehicleid, GetPlayerVirtualWorld(playerid));
+    LinkVehicleToInterior(vehicleid, GetPlayerInterior(playerid));
+    
+    new string[128];
+    format(string, sizeof(string), "Veículo VIP spawned! Model: %d", modelid);
+    SendClientMessage(playerid, COLOR_GREEN, string);
+    
+    return 1;
+}
+
+CMD:vheal(playerid, params[]) {
+    if(gPlayerInfo[playerid][pVIPLevel] < 1) return SendClientMessage(playerid, COLOR_RED, "ERRO: Você precisa ser VIP!");
+    
+    SetPlayerHealth(playerid, 100.0);
+    SetPlayerArmour(playerid, 100.0);
+    SendClientMessage(playerid, COLOR_GREEN, "VIP: Vida e colete restaurados!");
+    
+    return 1;
+}
+
+// =============================================================================
+// FUNÇÕES AUXILIARES
+// =============================================================================
+
+stock IsPlayerCriminal(playerid) {
+    new factionID = gPlayerInfo[playerid][pFactionID];
+    return (factionID >= 1 && factionID <= 4); // CV, ADA, TCP, Milícia
+}
+
+stock IsPlayerPolice(playerid) {
+    new factionID = gPlayerInfo[playerid][pFactionID];
+    return (factionID >= 5 && factionID <= 11); // PMERJ, BOPE, CORE, UPP, etc
+}
+
+stock GetPlayerTerritory(playerid) {
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(playerid, x, y, z);
+    
+    for(new i = 0; i < MAX_TERRITORIES; i++) {
+        if(x >= gTerritoryInfo[i][tMinX] && x <= gTerritoryInfo[i][tMaxX] &&
+           y >= gTerritoryInfo[i][tMinY] && y <= gTerritoryInfo[i][tMaxY]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+stock GetFactionName(factionid) {
+    new factionName[50];
+    switch(factionid) {
+        case 0: factionName = "Civil";
+        case 1: factionName = "Comando Vermelho";
+        case 2: factionName = "Amigos dos Amigos";
+        case 3: factionName = "Terceiro Comando Puro";
+        case 4: factionName = "Milícia";
+        case 5: factionName = "PMERJ";
+        case 6: factionName = "BOPE";
+        case 7: factionName = "CORE";
+        case 8: factionName = "UPP";
+        case 9: factionName = "Exército Brasileiro";
+        case 10: factionName = "PCERJ";
+        case 11: factionName = "PRF";
+        default: factionName = "Desconhecida";
+    }
+    return factionName;
+}
+
+stock GetPlayerNameEx(playerid) {
+    new name[MAX_PLAYER_NAME];
+    GetPlayerName(playerid, name, sizeof(name));
+    return name;
+}
+
+stock GetPlayerIPEx(playerid) {
+    new ip[16];
+    GetPlayerIp(playerid, ip, sizeof(ip));
+    return ip;
+}
+
+stock FormatNumber(number) {
+    new string[32];
+    format(string, sizeof(string), "%d", number);
+    return string;
+}
+
+stock IsPlayerNearPlayer(playerid, targetid, Float:range) {
+    new Float:x1, Float:y1, Float:z1, Float:x2, Float:y2, Float:z2;
+    GetPlayerPos(playerid, x1, y1, z1);
+    GetPlayerPos(targetid, x2, y2, z2);
+    return (GetDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2) <= range);
+}
+
+stock SendNearbyMessage(playerid, color, message[], Float:range) {
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(playerid, x, y, z);
+    
+    for(new i = 0; i < MAX_PLAYERS; i++) {
+        if(IsPlayerConnected(i)) {
+            new Float:px, Float:py, Float:pz;
+            GetPlayerPos(i, px, py, pz);
+            if(GetDistanceBetweenPoints3D(x, y, z, px, py, pz) <= range) {
+                SendClientMessage(i, color, message);
+            }
+        }
+    }
+}
+
+// Funções que precisam ser implementadas
+stock LoadFactions() { }
+stock LoadItems() { }
+stock LoadVehicles() { }
+stock LoadTerritories() { }
+stock LoadBusinesses() { }
+stock LoadHouses() { }
+stock CreateGlobalTextdraws() { }
+stock SpawnFactionVehicles() { }
+stock ResetPlayerData(playerid) { }
+stock CheckPlayerBan(playerid) { }
+stock SaveLog(type[], name[], ip[], action[]) { }
+stock UpdateOnlinePlayersText() { }
+stock SavePlayerData(playerid) { }
+stock ShowRegisterDialog(playerid) { }
+stock StartTutorial(playerid) { }
+stock GetFactionSkin(factionid, rank) { return 26; }
+stock ShowPlayerInventory(playerid) { }
+stock ShowPlayerPhone(playerid) { }
+stock BanPlayer(playerid, admin[], reason[]) { }
+stock GetFactionRankName(factionid, rank) { return "Civil"; }
+stock GetVIPName(level) { return "Nenhum"; }
+
+forward DelayedKick(playerid);
+public DelayedKick(playerid) {
+    Kick(playerid);
+}
