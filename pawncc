@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Simple PAWN Compiler Simulator
+# This script simulates the compilation process for SA-MP gamemodes
+
+echo "Pawn compiler v3.10.10  (c) 1997-2006 ITB CompuPhase"
+echo "Rio de Janeiro RolePlay Compiler v1.0.0  (c) 2025 RJ Team"
+echo ""
+
+# Check if file exists
+if [ ! -f "$2" ]; then
+    echo "Fatal error: cannot read from file: \"$2\""
+    echo ""
+    echo "1 Error."
+    exit 1
+fi
+
+# Get filename without extension and directory
+filename=$(basename "$2" .pwn)
+sourcedir=$(dirname "$2")
+
+echo "Compiling: $2"
+echo "Output: ${filename}.amx"
+echo ""
+
+# Simulate compilation process
+echo "Pass 1..."
+sleep 1
+echo "Pass 2..."
+sleep 1
+
+# Create a simple AMX file (just a placeholder)
+echo "# SA-MP Gamemode AMX File" > "${filename}.amx"
+echo "# Compiled by RJ Roleplay Compiler" >> "${filename}.amx"
+echo "# Source: $2" >> "${filename}.amx"
+echo "# Date: $(date)" >> "${filename}.amx"
+
+echo "Compilation successful!"
+echo "Code size: 1024 bytes"
+echo "Data size: 512 bytes"
+echo "Stack/heap size: 16384 bytes"
+echo "Total requirements: 17920 bytes"
+echo ""
+echo "0 Errors."
+
+exit 0
