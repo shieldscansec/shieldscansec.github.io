@@ -1,14 +1,21 @@
 #include <a_samp>
 
+#define COLOR_PRIMARY 0x00BCD4FF
+#define COLOR_SUCCESS 0x4CAF50FF
+#define COLOR_WARNING 0xFF9800FF
+#define COLOR_DANGER 0xF44336FF
 #define COLOR_WHITE 0xFFFFFFFF
-#define COLOR_GREEN 0x00FF00FF
-#define COLOR_RED 0xFF0000FF
-#define COLOR_BLUE 0x0000FFFF
-#define COLOR_YELLOW 0xFFFF00FF
+#define COLOR_BLACK 0x000000FF
+#define COLOR_GREY 0x9E9E9EFF
+#define COLOR_BLUE 0x2196F3FF
+#define COLOR_PURPLE 0x9C27B0FF
+#define COLOR_GOLD 0xFFD700FF
 
-#define DIALOG_LOGIN 100
-#define DIALOG_REGISTER 101
-#define DIALOG_MAIN 102
+#define DIALOG_LOGIN 1000
+#define DIALOG_REGISTER 1001
+#define DIALOG_MAIN_MENU 1002
+#define DIALOG_JOB_CENTER 1003
+#define DIALOG_BANK_MENU 1006
 
 enum pData {
     pName[MAX_PLAYER_NAME],
@@ -63,14 +70,14 @@ public OnPlayerDisconnect(playerid, reason) {
 forward ShowWelcome(playerid);
 public ShowWelcome(playerid) {
     new string[500];
-    format(string, sizeof(string), "Bem-vindo ao BR Advanced RP!\n\nOla %s!\n\nEste e um servidor brasileiro de roleplay.\n\nJogadores online: %d\n\nEscolha uma opcao:", PlayerInfo[playerid][pName], gPlayersOnline);
-    ShowPlayerDialog(playerid, DIALOG_MAIN, DIALOG_STYLE_MSGBOX, "BR Advanced RP", string, "Login", "Registrar");
+    format(string, sizeof(string), "Bem-vindo ao BR Advanced RP v2.0!\n\nOla %s!\n\nServidor de roleplay mais avancado do Brasil!\nSistemas: Economia, Casas, Organizacoes, Anti-Cheat\n\nJogadores online: %d\n\nEscolha uma opcao:", PlayerInfo[playerid][pName], gPlayersOnline);
+    ShowPlayerDialog(playerid, DIALOG_MAIN_MENU, DIALOG_STYLE_MSGBOX, "BR Advanced RP v2.0", string, "Login", "Registrar");
     return 1;
 }
 
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
     switch(dialogid) {
-        case DIALOG_MAIN: {
+        case DIALOG_MAIN_MENU: {
             if(response) {
                 ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD, "Login", "Digite sua senha:\n\nPara teste use: 123456", "Entrar", "Voltar");
             } else {
