@@ -517,16 +517,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
     // Stats Command
     if(strcmp("/stats", cmd, true) == 0) {
         new statsString[512];
-        format(statsString, sizeof(statsString), 
-            "=== ESTATISTICAS DO PLAYER ===\n\n"
-            "Nome: %s\n"
-            "Level: %d\n"
-            "Dinheiro: R$ %d\n"
-            "Banco: R$ %d\n"
-            "Emprego: %s\n"
-            "Faccao: %d\n"
-            "Admin: %d\n"
-            "VIP: %d", 
+        format(statsString, sizeof(statsString), "=== ESTATISTICAS DO PLAYER ===\n\nNome: %s\nLevel: %d\nDinheiro: R$ %d\nBanco: R$ %d\nEmprego: %s\nFaccao: %d\nAdmin: %d\nVIP: %d", 
             gPlayerInfo[playerid][pName], 
             gPlayerInfo[playerid][pLevel], 
             gPlayerInfo[playerid][pMoney], 
@@ -534,8 +525,7 @@ public OnPlayerCommandText(playerid, cmdtext[]) {
             gJobNames[gPlayerInfo[playerid][pJob]],
             gPlayerInfo[playerid][pFactionID], 
             gPlayerInfo[playerid][pAdminLevel], 
-            gPlayerInfo[playerid][pVIPLevel]
-        );
+            gPlayerInfo[playerid][pVIPLevel]);
         ShowPlayerDialog(playerid, 1000, DIALOG_STYLE_MSGBOX, "Suas Estatisticas", statsString, "Fechar", "");
         return 1;
     }
@@ -831,16 +821,7 @@ public MostrarMenuLogin(playerid) {
     if(!IsPlayerConnected(playerid)) return;
     
     new dialogString[512];
-    format(dialogString, sizeof(dialogString), 
-        "{FFFFFF}Bem-vindo ao {00FF00}Rio de Janeiro RolePlay{FFFFFF}!\n\n"
-        "Olá, {FFFF00}%s{FFFFFF}!\n\n"
-        "{FFFFFF}Este é um servidor de roleplay brasileiro\n"
-        "inspirado na cidade maravilhosa do Rio de Janeiro.\n\n"
-        "{FFFF00}• {FFFFFF}Se você já tem uma conta, clique em {00FF00}LOGIN\n"
-        "{FFFF00}• {FFFFFF}Se é novo no servidor, clique em {FF6600}REGISTRAR\n\n"
-        "{CCCCCC}Versão: 1.0 | Players Online: %d",
-        gPlayerInfo[playerid][pName], gPlayersOnline
-    );
+    format(dialogString, sizeof(dialogString), "{FFFFFF}Bem-vindo ao {00FF00}Rio de Janeiro RolePlay{FFFFFF}!\n\nOlá, {FFFF00}%s{FFFFFF}!\n\n{FFFFFF}Este é um servidor de roleplay brasileiro\ninspirado na cidade maravilhosa do Rio de Janeiro.\n\n{FFFF00}• {FFFFFF}Se você já tem uma conta, clique em {00FF00}LOGIN\n{FFFF00}• {FFFFFF}Se é novo no servidor, clique em {FF6600}REGISTRAR\n\n{CCCCCC}Versão: 1.0 | Players Online: %d", gPlayerInfo[playerid][pName], gPlayersOnline);
     
     ShowPlayerDialog(playerid, DIALOG_MAIN_MENU, DIALOG_STYLE_MSGBOX,
         "{00FF00}Rio de Janeiro RolePlay", 
@@ -961,11 +942,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
             } else {
                 GameTextForPlayer(playerid, "~r~Senha incorreta!", 3000, 3);
                 new attemptString[256];
-                format(attemptString, sizeof(attemptString),
-                    "{FFFFFF}Senha incorreta!\n\n"
-                    "{FF0000}Tentativas restantes: {FFFFFF}%d\n\n"
-                    "{FFFF00}Para teste use: {FFFFFF}123456",
-                    3 - gPlayerInfo[playerid][pLoginAttempts]);
+                format(attemptString, sizeof(attemptString), "{FFFFFF}Senha incorreta!\n\n{FF0000}Tentativas restantes: {FFFFFF}%d\n\n{FFFF00}Para teste use: {FFFFFF}123456", 3 - gPlayerInfo[playerid][pLoginAttempts]);
                 ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD,
                     "{FF0000}Login - Senha Incorreta", attemptString, "Tentar Novamente", "Voltar");
             }
