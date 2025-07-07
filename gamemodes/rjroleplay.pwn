@@ -35,6 +35,11 @@
 
 #define FOREACH_I_Player(%1) for(new %1 = 0; %1 < MAX_PLAYERS; %1++) if(IsPlayerConnected(%1))
 
+// ZCMD Compatibility
+public OnPlayerCommandText(playerid, cmdtext[]) {
+    return 0;
+}
+
 // =============================================================================
 // CONFIGURAÇÕES PRINCIPAIS
 // =============================================================================
@@ -526,13 +531,7 @@ stock ShowLoginDialog(playerid) {
     new playerName[MAX_PLAYER_NAME], string[512];
     GetPlayerName(playerid, playerName, sizeof(playerName));
     
-    format(string, sizeof(string), 
-        "{FFFFFF}Olá {00FF00}%s{FFFFFF}!\n\n"
-        "{FFFFFF}Sua conta foi encontrada em nosso banco de dados.\n"
-        "{FFFFFF}Digite sua senha para fazer login:\n\n"
-        "{FFFF00}➤ Digite sua senha abaixo:",
-        playerName
-    );
+    format(string, sizeof(string), "{FFFFFF}Olá {00FF00}%s{FFFFFF}!\\n\\n{FFFFFF}Sua conta foi encontrada em nosso banco de dados.\\n{FFFFFF}Digite sua senha para fazer login:\\n\\n{FFFF00}➤ Digite sua senha abaixo:", playerName);
     
     ShowPlayerDialog(playerid, DIALOG_LOGIN, DIALOG_STYLE_PASSWORD, 
         "{00FF00}Rio de Janeiro RolePlay - Login", string, "Entrar", "Sair");
@@ -544,13 +543,7 @@ stock ShowRegisterDialog(playerid) {
     new playerName[MAX_PLAYER_NAME], string[512];
     GetPlayerName(playerid, playerName, sizeof(playerName));
     
-    format(string, sizeof(string), 
-        "{FFFFFF}Olá {00FF00}%s{FFFFFF}!\n\n"
-        "{FFFFFF}Sua conta não foi encontrada em nosso banco de dados.\n"
-        "{FFFFFF}Você precisa se registrar para jogar.\n\n"
-        "{FFFF00}➤ Digite uma senha (mínimo 6 caracteres):",
-        playerName
-    );
+    format(string, sizeof(string), "{FFFFFF}Olá {00FF00}%s{FFFFFF}!\\n\\n{FFFFFF}Sua conta não foi encontrada em nosso banco de dados.\\n{FFFFFF}Você precisa se registrar para jogar.\\n\\n{FFFF00}➤ Digite uma senha (mínimo 6 caracteres):", playerName);
     
     ShowPlayerDialog(playerid, DIALOG_REGISTER, DIALOG_STYLE_PASSWORD, 
         "{00FF00}Rio de Janeiro RolePlay - Registro", string, "Registrar", "Sair");
@@ -801,10 +794,6 @@ stock FormatNumber(number) {
     format(string, sizeof(string), "%d", number);
     return string;
 }
-
-
-
-
 
 // =============================================================================
 // COMANDOS GERAIS
