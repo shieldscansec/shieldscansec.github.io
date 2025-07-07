@@ -802,68 +802,7 @@ stock FormatNumber(number) {
     return string;
 }
 
-stock GetPlayerNameEx(playerid) {
-    new name[MAX_PLAYER_NAME];
-    GetPlayerName(playerid, name, sizeof(name));
-    return name;
-}
 
-stock GetPlayerIPEx(playerid) {
-    new ip[16];
-    GetPlayerIp(playerid, ip, sizeof(ip));
-    return ip;
-}
-
-stock IsPlayerNearPlayer(playerid, targetid, Float:distance) {
-    new Float:x1, Float:y1, Float:z1, Float:x2, Float:y2, Float:z2;
-    GetPlayerPos(playerid, x1, y1, z1);
-    GetPlayerPos(targetid, x2, y2, z2);
-    return GetDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2) <= distance;
-}
-
-stock IsPlayerPolice(playerid) {
-    return (gPlayerInfo[playerid][pFactionID] >= 5 && gPlayerInfo[playerid][pFactionID] <= 11);
-}
-
-stock GetFactionName(factionid) {
-    new name[50] = "Nenhuma";
-    if(factionid > 0 && factionid < 20) {
-        format(name, sizeof(name), "%s", gFactionInfo[factionid][fName]);
-    }
-    return name;
-}
-
-stock GetFactionRankName(factionid, rank) {
-    new rankname[32] = "Membro";
-    // Implementar sistema de ranks específico
-    return rankname;
-}
-
-stock GetVIPName(viplevel) {
-    new vipname[32];
-    switch(viplevel) {
-        case 0: vipname = "Nenhum";
-        case 1: vipname = "Bronze";
-        case 2: vipname = "Prata";
-        case 3: vipname = "Ouro";
-        case 4: vipname = "Diamante";
-        default: vipname = "Desconhecido";
-    }
-    return vipname;
-}
-
-stock SendNearbyMessage(playerid, color, const message[], Float:distance) {
-    new Float:x, Float:y, Float:z;
-    GetPlayerPos(playerid, x, y, z);
-    
-    for(new i = 0; i < MAX_PLAYERS; i++) {
-        if(IsPlayerConnected(i) && GetPlayerVirtualWorld(i) == GetPlayerVirtualWorld(playerid)) {
-            if(IsPlayerInRangeOfPoint(i, distance, x, y, z)) {
-                SendClientMessage(i, color, message);
-            }
-        }
-    }
-}
 
 
 
@@ -1309,10 +1248,20 @@ stock GetPlayerIPEx(playerid) {
     return ip;
 }
 
-stock FormatNumber(number) {
-    new string[32];
-    format(string, sizeof(string), "%d", number);
-    return string;
+stock IsPlayerAllowedWeapon(playerid, weapon) {
+    // Lista de armas permitidas para cada facção
+    switch(gPlayerInfo[playerid][pFactionID]) {
+        case 1..4: { // Facções criminosas
+            if(weapon >= 22 && weapon <= 46) return 1; // Armas básicas até avançadas
+        }
+        case 5..11: { // Facções policiais
+            if(weapon >= 22 && weapon <= 46) return 1; // Todas as armas
+        }
+        default: { // Civis
+            if(weapon == 24 || weapon == 25 || weapon == 41) return 1; // Apenas pistolas básicas
+        }
+    }
+    return 0;
 }
 
 stock IsPlayerNearPlayer(playerid, targetid, Float:range) {
@@ -1322,15 +1271,13 @@ stock IsPlayerNearPlayer(playerid, targetid, Float:range) {
     return (GetDistanceBetweenPoints3D(x1, y1, z1, x2, y2, z2) <= range);
 }
 
-stock SendNearbyMessage(playerid, color, message[], Float:range) {
+stock SendNearbyMessage(playerid, color, const message[], Float:range) {
     new Float:x, Float:y, Float:z;
     GetPlayerPos(playerid, x, y, z);
     
     for(new i = 0; i < MAX_PLAYERS; i++) {
-        if(IsPlayerConnected(i)) {
-            new Float:px, Float:py, Float:pz;
-            GetPlayerPos(i, px, py, pz);
-            if(GetDistanceBetweenPoints3D(x, y, z, px, py, pz) <= range) {
+        if(IsPlayerConnected(i) && GetPlayerVirtualWorld(i) == GetPlayerVirtualWorld(playerid)) {
+            if(IsPlayerInRangeOfPoint(i, range, x, y, z)) {
                 SendClientMessage(i, color, message);
             }
         }
@@ -1351,14 +1298,49 @@ stock CheckPlayerBan(playerid) { }
 stock SaveLog(type[], name[], ip[], action[]) { }
 stock UpdateOnlinePlayersText() { }
 stock SavePlayerData(playerid) { }
-stock ShowRegisterDialog(playerid) { }
+
 stock StartTutorial(playerid) { }
 stock GetFactionSkin(factionid, rank) { return 26; }
 stock ShowPlayerInventory(playerid) { }
 stock ShowPlayerPhone(playerid) { }
 stock BanPlayer(playerid, admin[], reason[]) { }
-stock GetFactionRankName(factionid, rank) { return "Civil"; }
-stock GetVIPName(level) { return "Nenhum"; }
+stock GetFactionRankName(factionid, rank) {
+    new rankName[32] = "Civil";
+    switch(factionid) {
+        case 1..4: { // Criminosas
+            switch(rank) {
+                case 1: rankName = "Soldado";
+                case 2: rankName = "Cabo";
+                case 3: rankName = "Sargento";
+                case 4: rankName = "Tenente";
+                case 5: rankName = "Comandante";
+                default: rankName = "Membro";
+            }
+        }
+        case 5..11: { // Policiais
+            switch(rank) {
+                case 1: rankName = "Soldado";
+                case 2: rankName = "Cabo";
+                case 3: rankName = "Sargento";
+                case 4: rankName = "Tenente";
+                case 5: rankName = "Capitão";
+                default: rankName = "Recruta";
+            }
+        }
+    }
+    return rankName;
+}
+
+stock GetVIPName(level) {
+    new vipName[32] = "Nenhum";
+    switch(level) {
+        case 1: vipName = "Bronze";
+        case 2: vipName = "Prata"; 
+        case 3: vipName = "Ouro";
+        case 4: vipName = "Diamante";
+    }
+    return vipName;
+}
 
 forward DelayedKick(playerid);
 public DelayedKick(playerid) {
