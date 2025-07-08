@@ -343,5 +343,3 @@ stock Dialog_OnPlayerDisconnect(playerid)
     }
     return 1;
 }
-
-#endif

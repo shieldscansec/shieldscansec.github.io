@@ -26,6 +26,10 @@ native DestroyDynamic3DTextLabel(Text3D:id);
 native IsValidDynamic3DTextLabel(Text3D:id);
 
 // Constants
+#if !defined MAX_OBJECTS
+    #define MAX_OBJECTS 1000
+#endif
+
 #define STREAMER_OBJECT_SD          300.0
 #define STREAMER_OBJECT_DD          0.0
 #define STREAMER_PICKUP_SD          200.0
