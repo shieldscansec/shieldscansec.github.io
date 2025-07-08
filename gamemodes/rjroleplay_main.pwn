@@ -3,9 +3,9 @@
 // Inclui mapping completo do Rio de Janeiro com pontos turísticos e favelas
 
 #include <a_samp>
-#include <a_mysql>
 #include <sscanf2>
 #include <streamer>
+#include <zcmd>
 
 // ===============================================================================
 // CONFIGURAÇÕES PRINCIPAIS
@@ -55,7 +55,6 @@ enum E_PLAYER_DATA
 // ===============================================================================
 
 new PlayerData[MAX_PLAYERS][E_PLAYER_DATA];
-new MySQL:Database;
 
 // ===============================================================================
 // CALLBACKS PRINCIPAIS
@@ -69,9 +68,6 @@ main()
 public OnGameModeInit()
 {
     SetGameModeText(SERVER_NAME " " VERSION);
-    
-    // Conectar ao banco
-    ConnectToDatabase();
     
     // CRIAR MAPPING DO RIO DE JANEIRO
     CreateRioDeJaneiroMapping();
@@ -96,7 +92,6 @@ public OnGameModeExit()
             SavePlayerData(i);
         }
     }
-    mysql_close(Database);
     return 1;
 }
 
@@ -107,11 +102,13 @@ public OnGameModeExit()
 public OnPlayerConnect(playerid)
 {
     ResetPlayerData(playerid);
-    CheckPlayerAccount(playerid);
     
     new string[128];
     format(string, sizeof(string), "🌟 Bem-vindo ao %s!", SERVER_NAME);
     SendClientMessage(playerid, COLOR_SUCCESS, string);
+    
+    // Verificar se a conta existe
+    SetTimerEx("CheckPlayerAccount", 1000, false, "i", playerid);
     
     return 1;
 }
@@ -152,8 +149,6 @@ public OnPlayerText(playerid, text[])
     SendClientMessageToAll(COLOR_WHITE, string);
     return 0;
 }
-
-
 
 // ===============================================================================
 // SISTEMA DE MAPPING - RIO DE JANEIRO
@@ -307,61 +302,20 @@ stock CreatePoliceStations()
 }
 
 // ===============================================================================
-// SISTEMA DE AUTENTICAÇÃO
+// SISTEMA DE AUTENTICAÇÃO COM ARQUIVOS INI
 // ===============================================================================
 
-stock ConnectToDatabase()
+forward CheckPlayerAccount(playerid);
+public CheckPlayerAccount(playerid)
 {
-    Database = mysql_connect("localhost", "root", "", "rjroleplay");
-    
-    if(Database == MySQL:0)
-    {
-        print("❌ ERRO: Falha ao conectar com MySQL!");
-        return 0;
-    }
-    
-    mysql_set_charset("utf8", Database);
-    print("✅ Conectado ao MySQL!");
-    
-    // Criar tabela se não existir
-    mysql_tquery(Database, 
-        "CREATE TABLE IF NOT EXISTS `accounts` (\
-            `id` int(11) NOT NULL AUTO_INCREMENT,\
-            `name` varchar(24) NOT NULL,\
-            `password` varchar(65) NOT NULL,\
-            `level` int(11) DEFAULT '1',\
-            `money` int(11) DEFAULT '5000',\
-            `bank_money` int(11) DEFAULT '0',\
-            `hunger` int(3) DEFAULT '100',\
-            `thirst` int(3) DEFAULT '100',\
-            `energy` int(3) DEFAULT '100',\
-            `pos_x` float DEFAULT '1642.0901',\
-            `pos_y` float DEFAULT '-2335.2654',\
-            `pos_z` float DEFAULT '13.5469',\
-            `pos_a` float DEFAULT '270.0',\
-            PRIMARY KEY (`id`),\
-            UNIQUE KEY `name` (`name`)\
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;"
-    );
-    
-    return 1;
-}
-
-stock CheckPlayerAccount(playerid)
-{
-    new query[256], name[MAX_PLAYER_NAME];
+    new name[MAX_PLAYER_NAME];
     GetPlayerName(playerid, name, sizeof(name));
     format(PlayerData[playerid][pName], MAX_PLAYER_NAME, "%s", name);
     
-    mysql_format(Database, query, sizeof(query), 
-        "SELECT * FROM `accounts` WHERE `name` = '%e' LIMIT 1", name);
-    mysql_tquery(Database, query, "OnPlayerAccountCheck", "d", playerid);
-}
-
-forward OnPlayerAccountCheck(playerid);
-public OnPlayerAccountCheck(playerid)
-{
-    if(cache_get_row_count())
+    new file_path[64];
+    format(file_path, sizeof(file_path), "scriptfiles/accounts/%s.ini", name);
+    
+    if(fexist(file_path))
     {
         ShowLoginDialog(playerid);
     }
@@ -415,13 +369,49 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                 return 1;
             }
             
-            new query[256], password_hash[65];
+            new password_hash[65];
             SHA256_PassHash(inputtext, "rjrp_salt", password_hash, 65);
             
-            mysql_format(Database, query, sizeof(query), 
-                "SELECT * FROM `accounts` WHERE `name` = '%e' AND `password` = '%e' LIMIT 1", 
-                PlayerData[playerid][pName], password_hash);
-            mysql_tquery(Database, query, "OnPlayerLoginCheck", "d", playerid);
+            // Verificar senha no arquivo INI
+            new file_path[64];
+            format(file_path, sizeof(file_path), "scriptfiles/accounts/%s.ini", PlayerData[playerid][pName]);
+            
+            new File:file = fopen(file_path, io_read);
+            if(file)
+            {
+                new line[256], key[32], value[64];
+                new bool:password_correct = false;
+                
+                while(fread(file, line))
+                {
+                    if(sscanf(line, "p<=>s[32]s[64]", key, value) == 2)
+                    {
+                        if(!strcmp(key, "Password", true))
+                        {
+                            if(!strcmp(value, password_hash, true))
+                            {
+                                password_correct = true;
+                            }
+                            break;
+                        }
+                    }
+                }
+                fclose(file);
+                
+                if(password_correct)
+                {
+                    LoadPlayerData(playerid);
+                    PlayerData[playerid][pLogged] = 1;
+                    
+                    SendClientMessage(playerid, COLOR_SUCCESS, "✅ Login realizado com sucesso!");
+                    TogglePlayerSpectating(playerid, false);
+                }
+                else
+                {
+                    SendClientMessage(playerid, COLOR_ERROR, "❌ Senha incorreta!");
+                    ShowLoginDialog(playerid);
+                }
+            }
         }
         case 2: // Register
         {
@@ -438,156 +428,153 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                 return 1;
             }
             
-            new query[512], password_hash[65];
+            new password_hash[65];
             SHA256_PassHash(inputtext, "rjrp_salt", password_hash, 65);
             
-            mysql_format(Database, query, sizeof(query), 
-                "INSERT INTO `accounts` (`name`, `password`) VALUES ('%e', '%e')", 
-                PlayerData[playerid][pName], password_hash);
-            mysql_tquery(Database, query, "OnPlayerRegisterComplete", "d", playerid);
+            // Criar conta padrão
+            PlayerData[playerid][pLogged] = 1;
+            PlayerData[playerid][pLevel] = 1;
+            PlayerData[playerid][pMoney] = 5000;
+            PlayerData[playerid][pBankMoney] = 0;
+            PlayerData[playerid][pHunger] = 100;
+            PlayerData[playerid][pThirst] = 100;
+            PlayerData[playerid][pEnergy] = 100;
+            PlayerData[playerid][pPosX] = 1642.0901;
+            PlayerData[playerid][pPosY] = -2335.2654;
+            PlayerData[playerid][pPosZ] = 13.5469;
+            PlayerData[playerid][pPosA] = 270.0;
+            format(PlayerData[playerid][pPassword], 65, "%s", password_hash);
+            
+            SavePlayerData(playerid);
+            
+            SendClientMessage(playerid, COLOR_SUCCESS, "✅ Conta criada com sucesso!");
+            SendClientMessage(playerid, COLOR_INFO, "💡 Use /ajuda para conhecer os comandos!");
+            
+            TogglePlayerSpectating(playerid, false);
         }
     }
     return 1;
 }
 
-forward OnPlayerLoginCheck(playerid);
-public OnPlayerLoginCheck(playerid)
-{
-    if(cache_get_row_count())
-    {
-        LoadPlayerData(playerid);
-        PlayerData[playerid][pLogged] = 1;
-        
-        SendClientMessage(playerid, COLOR_SUCCESS, "✅ Login realizado com sucesso!");
-        TogglePlayerSpectating(playerid, false);
-    }
-    else
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "❌ Senha incorreta!");
-        ShowLoginDialog(playerid);
-    }
-    return 1;
-}
-
-forward OnPlayerRegisterComplete(playerid);
-public OnPlayerRegisterComplete(playerid)
-{
-    PlayerData[playerid][pLogged] = 1;
-    PlayerData[playerid][pLevel] = 1;
-    PlayerData[playerid][pMoney] = 5000;
-    PlayerData[playerid][pBankMoney] = 0;
-    PlayerData[playerid][pHunger] = 100;
-    PlayerData[playerid][pThirst] = 100;
-    PlayerData[playerid][pEnergy] = 100;
-    
-    SendClientMessage(playerid, COLOR_SUCCESS, "✅ Conta criada com sucesso!");
-    SendClientMessage(playerid, COLOR_INFO, "💡 Use /ajuda para conhecer os comandos!");
-    
-    TogglePlayerSpectating(playerid, false);
-    return 1;
-}
-
 // ===============================================================================
-// COMANDOS PRINCIPAIS
+// COMANDOS ZCMD
 // ===============================================================================
 
-// ===============================================================================
-// SISTEMA DE COMANDOS (sem Pawn.CMD)
-// ===============================================================================
-
-public OnPlayerCommandText(playerid, cmdtext[])
+CMD:ajuda(playerid, params[])
 {
     if(!PlayerData[playerid][pLogged])
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
-        return 1;
-    }
+        return SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
     
-    // Comandos principais
-    if(!strcmp(cmdtext, "/ajuda", true))
-    {
-        new string[1024];
-        
-        strcat(string, "{4ECDC4}═══════════════ 📋 AJUDA - RIO DE JANEIRO RP ═══════════════\n\n");
-        strcat(string, "{FFFFFF}🎮 {FFD93D}COMANDOS GERAIS:\n");
-        strcat(string, "{FFFFFF}/stats - Ver suas estatísticas\n");
-        strcat(string, "{FFFFFF}/tempo - Ver hora atual\n");
-        strcat(string, "{FFFFFF}/creditos - Créditos do servidor\n\n");
-        
-        strcat(string, "{FFFFFF}💰 {FFD93D}ECONOMIA:\n");
-        strcat(string, "{FFFFFF}/banco - Acessar conta bancária\n");
-        strcat(string, "{FFFFFF}/pagar [id] [valor] - Pagar em dinheiro\n\n");
-        
-        strcat(string, "{FFFFFF}📱 {FFD93D}ROLEPLAY:\n");
-        strcat(string, "{FFFFFF}/me [ação] - Ação de roleplay\n");
-        strcat(string, "{FFFFFF}/do [descrição] - Descrição RP\n\n");
-        
-        strcat(string, "{95E1D3}💡 Discord: discord.gg/rjroleplay");
-        
-        ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "📋 Central de Ajuda", string, "OK", "");
-        return 1;
-    }
+    new string[1024];
     
-    if(!strcmp(cmdtext, "/stats", true))
-    {
-        new string[512];
-        
-        format(string, sizeof(string), 
-            "{4ECDC4}📊 ESTATÍSTICAS DE %s\n\n\
-            {FFFFFF}💰 Dinheiro: {4ECDC4}R$ %d\n\
-            {FFFFFF}🏦 Banco: {4ECDC4}R$ %d\n\
-            {FFFFFF}📈 Nível: {4ECDC4}%d\n\
-            {FFFFFF}🍔 Fome: {4ECDC4}%d%%\n\
-            {FFFFFF}🥤 Sede: {4ECDC4}%d%%\n\
-            {FFFFFF}⚡ Energia: {4ECDC4}%d%%",
-            PlayerData[playerid][pName],
-            PlayerData[playerid][pMoney],
-            PlayerData[playerid][pBankMoney],
-            PlayerData[playerid][pLevel],
-            PlayerData[playerid][pHunger],
-            PlayerData[playerid][pThirst],
-            PlayerData[playerid][pEnergy]
-        );
-        
-        ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "📊 Suas Estatísticas", string, "OK", "");
-        return 1;
-    }
+    strcat(string, "{4ECDC4}═══════════════ 📋 AJUDA - RIO DE JANEIRO RP ═══════════════\n\n");
+    strcat(string, "{FFFFFF}🎮 {FFD93D}COMANDOS GERAIS:\n");
+    strcat(string, "{FFFFFF}/stats - Ver suas estatísticas\n");
+    strcat(string, "{FFFFFF}/tempo - Ver hora atual\n");
+    strcat(string, "{FFFFFF}/creditos - Créditos do servidor\n\n");
     
-    if(!strncmp(cmdtext, "/me ", 4))
-    {
-        new params[128];
-        format(params, sizeof(params), "%s", cmdtext[4]);
-        
-        if(strlen(params) < 3)
-        {
-            SendClientMessage(playerid, COLOR_ERROR, "Uso: /me [ação]");
-            return 1;
-        }
-        
-        new string[128];
-        format(string, sizeof(string), "* %s %s", PlayerData[playerid][pName], params);
-        
-        SendClientMessageInRange(30.0, playerid, 0xC2A2DAFF, string);
-        return 1;
-    }
+    strcat(string, "{FFFFFF}💰 {FFD93D}ECONOMIA:\n");
+    strcat(string, "{FFFFFF}/banco - Acessar conta bancária\n");
+    strcat(string, "{FFFFFF}/pagar [id] [valor] - Pagar em dinheiro\n\n");
     
-    // Comando não encontrado
-    SendClientMessage(playerid, COLOR_ERROR, "❌ Comando não encontrado. Use /ajuda");
+    strcat(string, "{FFFFFF}📱 {FFD93D}ROLEPLAY:\n");
+    strcat(string, "{FFFFFF}/me [ação] - Ação de roleplay\n");
+    strcat(string, "{FFFFFF}/do [descrição] - Descrição RP\n\n");
+    
+    strcat(string, "{95E1D3}💡 Discord: discord.gg/rjroleplay");
+    
+    ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "📋 Central de Ajuda", string, "OK", "");
     return 1;
 }
 
-CMD:do(playerid, const params[])
+CMD:stats(playerid, params[])
 {
+    if(!PlayerData[playerid][pLogged])
+        return SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
+    
+    new string[512];
+    
+    format(string, sizeof(string), 
+        "{4ECDC4}📊 ESTATÍSTICAS DE %s\n\n\
+        {FFFFFF}💰 Dinheiro: {4ECDC4}R$ %d\n\
+        {FFFFFF}🏦 Banco: {4ECDC4}R$ %d\n\
+        {FFFFFF}📈 Nível: {4ECDC4}%d\n\
+        {FFFFFF}🍔 Fome: {4ECDC4}%d%%\n\
+        {FFFFFF}🥤 Sede: {4ECDC4}%d%%\n\
+        {FFFFFF}⚡ Energia: {4ECDC4}%d%%",
+        PlayerData[playerid][pName],
+        PlayerData[playerid][pMoney],
+        PlayerData[playerid][pBankMoney],
+        PlayerData[playerid][pLevel],
+        PlayerData[playerid][pHunger],
+        PlayerData[playerid][pThirst],
+        PlayerData[playerid][pEnergy]
+    );
+    
+    ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "📊 Suas Estatísticas", string, "OK", "");
+    return 1;
+}
+
+CMD:me(playerid, params[])
+{
+    if(!PlayerData[playerid][pLogged])
+        return SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
+    
     if(strlen(params) < 3)
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "Uso: /do [descrição]");
-        return 1;
-    }
+        return SendClientMessage(playerid, COLOR_ERROR, "Uso: /me [ação]");
+    
+    new string[128];
+    format(string, sizeof(string), "* %s %s", PlayerData[playerid][pName], params);
+    
+    SendClientMessageInRange(30.0, playerid, 0xC2A2DAFF, string);
+    return 1;
+}
+
+CMD:do(playerid, params[])
+{
+    if(!PlayerData[playerid][pLogged])
+        return SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
+    
+    if(strlen(params) < 3)
+        return SendClientMessage(playerid, COLOR_ERROR, "Uso: /do [descrição]");
     
     new string[128];
     format(string, sizeof(string), "* %s (( %s ))", params, PlayerData[playerid][pName]);
     
     SendClientMessageInRange(30.0, playerid, 0xC2A2DAFF, string);
+    return 1;
+}
+
+CMD:tempo(playerid, params[])
+{
+    if(!PlayerData[playerid][pLogged])
+        return SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
+    
+    new hour, minute, second;
+    gettime(hour, minute, second);
+    
+    new string[64];
+    format(string, sizeof(string), "🕐 Horário atual: %02d:%02d:%02d", hour, minute, second);
+    SendClientMessage(playerid, COLOR_INFO, string);
+    return 1;
+}
+
+CMD:creditos(playerid, params[])
+{
+    if(!PlayerData[playerid][pLogged])
+        return SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
+    
+    new string[512];
+    strcat(string, "{4ECDC4}🏆 {FFFFFF}CRÉDITOS - RIO DE JANEIRO RP\n\n");
+    strcat(string, "{FFFFFF}🎯 Desenvolvido por: {4ECDC4}Rio de Janeiro RP Team\n");
+    strcat(string, "{FFFFFF}🗺️ Mapping: {4ECDC4}Equipe de Design\n");
+    strcat(string, "{FFFFFF}💻 Scripts: {4ECDC4}Equipe de Desenvolvimento\n");
+    strcat(string, "{FFFFFF}🎨 Design: {4ECDC4}Creative Team\n\n");
+    strcat(string, "{FFFFFF}🌟 Versão: {FFD93D}" VERSION "\n");
+    strcat(string, "{FFFFFF}📱 Discord: {95E1D3}discord.gg/rjroleplay\n\n");
+    strcat(string, "{95E1D3}Obrigado por jogar no Rio de Janeiro RP! 🇧🇷");
+    
+    ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "🏆 Créditos", string, "OK", "");
     return 1;
 }
 
@@ -608,29 +595,73 @@ stock SHA256_PassHash(const password[], const salt[], dest[], dest_len = sizeof(
 
 stock LoadPlayerData(playerid)
 {
-    if(cache_get_row_count())
+    new file_path[64];
+    format(file_path, sizeof(file_path), "scriptfiles/accounts/%s.ini", PlayerData[playerid][pName]);
+    
+    new File:file = fopen(file_path, io_read);
+    if(file)
     {
-        PlayerData[playerid][pLevel] = cache_get_value_int(0, 3);
-        PlayerData[playerid][pMoney] = cache_get_value_int(0, 4);
-        PlayerData[playerid][pBankMoney] = cache_get_value_int(0, 5);
-        PlayerData[playerid][pHunger] = cache_get_value_int(0, 6);
-        PlayerData[playerid][pThirst] = cache_get_value_int(0, 7);
-        PlayerData[playerid][pEnergy] = cache_get_value_int(0, 8);
-        PlayerData[playerid][pPosX] = cache_get_value_float(0, 9);
-        PlayerData[playerid][pPosY] = cache_get_value_float(0, 10);
-        PlayerData[playerid][pPosZ] = cache_get_value_float(0, 11);
-        PlayerData[playerid][pPosA] = cache_get_value_float(0, 12);
+        new line[256], key[32], value[64];
+        
+        while(fread(file, line))
+        {
+            if(sscanf(line, "p<=>s[32]s[64]", key, value) == 2)
+            {
+                if(!strcmp(key, "Level", true))
+                    PlayerData[playerid][pLevel] = strval(value);
+                else if(!strcmp(key, "Money", true))
+                    PlayerData[playerid][pMoney] = strval(value);
+                else if(!strcmp(key, "BankMoney", true))
+                    PlayerData[playerid][pBankMoney] = strval(value);
+                else if(!strcmp(key, "Hunger", true))
+                    PlayerData[playerid][pHunger] = strval(value);
+                else if(!strcmp(key, "Thirst", true))
+                    PlayerData[playerid][pThirst] = strval(value);
+                else if(!strcmp(key, "Energy", true))
+                    PlayerData[playerid][pEnergy] = strval(value);
+                else if(!strcmp(key, "PosX", true))
+                    PlayerData[playerid][pPosX] = floatstr(value);
+                else if(!strcmp(key, "PosY", true))
+                    PlayerData[playerid][pPosY] = floatstr(value);
+                else if(!strcmp(key, "PosZ", true))
+                    PlayerData[playerid][pPosZ] = floatstr(value);
+                else if(!strcmp(key, "PosA", true))
+                    PlayerData[playerid][pPosA] = floatstr(value);
+                else if(!strcmp(key, "Admin", true))
+                    PlayerData[playerid][pAdmin] = strval(value);
+            }
+        }
+        fclose(file);
     }
 }
 
 stock SavePlayerData(playerid)
 {
-    new query[512];
-    mysql_format(Database, query, sizeof(query),
-        "UPDATE `accounts` SET `money` = %d, `bank_money` = %d, `hunger` = %d, `thirst` = %d, `energy` = %d WHERE `name` = '%e'",
-        PlayerData[playerid][pMoney], PlayerData[playerid][pBankMoney], PlayerData[playerid][pHunger],
-        PlayerData[playerid][pThirst], PlayerData[playerid][pEnergy], PlayerData[playerid][pName]);
-    mysql_tquery(Database, query);
+    new file_path[64];
+    format(file_path, sizeof(file_path), "scriptfiles/accounts/%s.ini", PlayerData[playerid][pName]);
+    
+    new File:file = fopen(file_path, io_write);
+    if(file)
+    {
+        new Float:x, Float:y, Float:z, Float:a;
+        GetPlayerPos(playerid, x, y, z);
+        GetPlayerFacingAngle(playerid, a);
+        
+        fprintf(file, "Password=%s\n", PlayerData[playerid][pPassword]);
+        fprintf(file, "Level=%d\n", PlayerData[playerid][pLevel]);
+        fprintf(file, "Money=%d\n", PlayerData[playerid][pMoney]);
+        fprintf(file, "BankMoney=%d\n", PlayerData[playerid][pBankMoney]);
+        fprintf(file, "Hunger=%d\n", PlayerData[playerid][pHunger]);
+        fprintf(file, "Thirst=%d\n", PlayerData[playerid][pThirst]);
+        fprintf(file, "Energy=%d\n", PlayerData[playerid][pEnergy]);
+        fprintf(file, "PosX=%f\n", x);
+        fprintf(file, "PosY=%f\n", y);
+        fprintf(file, "PosZ=%f\n", z);
+        fprintf(file, "PosA=%f\n", a);
+        fprintf(file, "Admin=%d\n", PlayerData[playerid][pAdmin]);
+        
+        fclose(file);
+    }
 }
 
 stock ResetPlayerData(playerid)
@@ -648,8 +679,8 @@ stock ResetPlayerData(playerid)
 
 stock SetupPlayerSpawn(playerid)
 {
-    SetPlayerPos(playerid, 1642.0901, -2335.2654, 13.5469);
-    SetPlayerFacingAngle(playerid, 270.0);
+    SetPlayerPos(playerid, PlayerData[playerid][pPosX], PlayerData[playerid][pPosY], PlayerData[playerid][pPosZ]);
+    SetPlayerFacingAngle(playerid, PlayerData[playerid][pPosA]);
     SetPlayerInterior(playerid, 0);
     SetPlayerVirtualWorld(playerid, 0);
     GivePlayerMoney(playerid, PlayerData[playerid][pMoney]);
