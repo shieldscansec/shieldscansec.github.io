@@ -1,0 +1,12 @@
+[submodule "lib/urmem"]
+	path = lib/urmem
+	url = https://github.com/katursis/urmem
+[submodule "lib/cpptoml"]
+	path = lib/cpptoml
+	url = https://github.com/skystrife/cpptoml
+[submodule "lib/samp-ptl"]
+	path = lib/samp-ptl
+	url = https://github.com/katursis/samp-ptl
+[submodule "cmake/modules"]
+	path = cmake/modules
+	url = https://github.com/katursis/samp-cmake-modules

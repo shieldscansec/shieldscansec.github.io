@@ -1,105 +1,80 @@
-/*
-===============================================================================
-    🏙️ RIO DE JANEIRO ROLEPLAY - GAMEMODE PRINCIPAL
-    
-    Servidor SA-MP RolePlay completo inspirado no Rio de Janeiro
-    
-    Autor: Rio de Janeiro RP Team
-    Versão: 2.0
-===============================================================================
-*/
+// Rio de Janeiro RolePlay - Main GameMode
+// Desenvolvido para SA-MP com foco em roleplay brasileiro
+// Inclui mapping completo do Rio de Janeiro com pontos turísticos e favelas
 
 #include <a_samp>
 #include <a_mysql>
 #include <sscanf2>
 #include <streamer>
-#include <Pawn.CMD>
-#include <easyDialog>
 
 // ===============================================================================
-// DEFINIÇÕES PRINCIPAIS
+// CONFIGURAÇÕES PRINCIPAIS
 // ===============================================================================
 
-#define SERVER_NAME         "Rio de Janeiro RolePlay"
-#define SERVER_VERSION      "2.0"
+#define SERVER_NAME             "Rio de Janeiro RolePlay"
+#define VERSION                 "1.0.0"
+#define MAX_PASSWORD_LEN        65
 
-// Cores
-#define COLOR_WHITE         0xFFFFFFFF
-#define COLOR_RED           0xFF6B6BFF
-#define COLOR_GREEN         0x4ECDC4FF
-#define COLOR_BLUE          0x74B9FFFF
-#define COLOR_YELLOW        0xFFD93DFF
-#define COLOR_SUCCESS       0x4ECDC4FF
-#define COLOR_ERROR         0xFF6B6BFF
-#define COLOR_INFO          0x95E1D3FF
-#define COLOR_ADMIN         0xFF4444FF
+// Cores principais
+#define COLOR_WHITE             0xFFFFFFFF
+#define COLOR_ERROR             0xFF6B6BFF
+#define COLOR_SUCCESS           0x4ECDC4FF
+#define COLOR_INFO              0x95E1D3FF
+#define COLOR_WARNING           0xFFD93DFF
+#define COLOR_YELLOW            0xFFFF00FF
+#define COLOR_GREEN             0x00FF00FF
+#define COLOR_BLUE              0x0000FFFF
+#define COLOR_RED               0xFF0000FF
 
 // ===============================================================================
-// ESTRUTURAS DE DADOS
+// ENUMS E ESTRUTURAS
 // ===============================================================================
 
 enum E_PLAYER_DATA
 {
-    pID,
     pName[MAX_PLAYER_NAME],
-    pPassword[65],
+    pPassword[MAX_PASSWORD_LEN],
     pLogged,
+    pSpawned,
     pLevel,
     pMoney,
     pBankMoney,
     pHunger,
     pThirst,
     pEnergy,
-    pJob,
-    pFaction,
-    pAdmin,
-    pVIP,
     Float:pPosX,
     Float:pPosY,
     Float:pPosZ,
     Float:pPosA,
-    pSpawned
+    pAdmin,
+    Text:pHUD[6]
 }
+
+// ===============================================================================
+// VARIÁVEIS GLOBAIS
+// ===============================================================================
 
 new PlayerData[MAX_PLAYERS][E_PLAYER_DATA];
 new MySQL:Database;
 
-// TextDraws do HUD
-new PlayerText:HUD_Money[MAX_PLAYERS];
-new PlayerText:HUD_Status[MAX_PLAYERS];
-
 // ===============================================================================
-// MAIN FUNCTIONS
+// CALLBACKS PRINCIPAIS
 // ===============================================================================
 
 main()
 {
-    print("\n===============================================");
-    print("  🏙️ RIO DE JANEIRO ROLEPLAY");
-    print("  Gamemode carregado com sucesso!");
-    print("  Versão: " SERVER_VERSION);
-    print("===============================================\n");
+    print("🏖️ Rio de Janeiro RolePlay - Carregando...");
 }
 
 public OnGameModeInit()
 {
-    // Configurações básicas
-    SetGameModeText("Rio de Janeiro RP v" SERVER_VERSION);
-    SendRconCommand("hostname " SERVER_NAME);
-    SendRconCommand("mapname Rio de Janeiro");
-    
-    EnableStuntBonusForAll(0);
-    SetNameTagDrawDistance(40.0);
-    ShowNameTags(1);
+    SetGameModeText(SERVER_NAME " " VERSION);
     
     // Conectar ao banco
     ConnectToDatabase();
     
     // CRIAR MAPPING DO RIO DE JANEIRO
     CreateRioDeJaneiroMapping();
-    
-    // Inicializar comandos
-    PC_InitializeBrazilianCommands();
     
     // Timers
     SetTimer("ServerUpdate", 1000, true);
@@ -178,24 +153,7 @@ public OnPlayerText(playerid, text[])
     return 0;
 }
 
-public OnPlayerCommandText(playerid, cmdtext[])
-{
-    if(!PlayerData[playerid][pLogged])
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
-        return 1;
-    }
-    
-    new result = PC_ProcessCommand(playerid, cmdtext);
-    
-    if(result == COMMAND_UNKNOWN)
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "❌ Comando não encontrado. Use /ajuda");
-        return 1;
-    }
-    
-    return 1;
-}
+
 
 // ===============================================================================
 // SISTEMA DE MAPPING - RIO DE JANEIRO
@@ -207,22 +165,22 @@ stock CreateRioDeJaneiroMapping()
     
     // === CRISTO REDENTOR ===
     CreateDynamicObject(8661, -2274.0, 2975.0, 50.0, 0.0, 0.0, 0.0);
-    Create3DTextLabel("⛪ CRISTO REDENTOR\n{FFFFFF}Cartão postal do Rio", COLOR_INFO, -2274.0, 2975.0, 55.0, 100.0, 0);
+    CreateDynamic3DTextLabel("⛪ CRISTO REDENTOR\n{FFFFFF}Cartão postal do Rio", COLOR_INFO, -2274.0, 2975.0, 55.0, 100.0);
     
     // === PÃO DE AÇÚCAR ===
     CreateDynamicObject(8661, -2650.0, 1350.0, 80.0, 0.0, 0.0, 0.0);
-    Create3DTextLabel("🗻 PÃO DE AÇÚCAR\n{FFFFFF}Vista panorâmica", COLOR_INFO, -2650.0, 1350.0, 85.0, 100.0, 0);
+    CreateDynamic3DTextLabel("🗻 PÃO DE AÇÚCAR\n{FFFFFF}Vista panorâmica", COLOR_INFO, -2650.0, 1350.0, 85.0, 100.0);
     
     // === PRAIA DE COPACABANA ===
     for(new i = 0; i < 20; i++)
     {
-        CreateDynamicObject(1344, -2662.0 + (i * 10), 1426.0, 7.0, 0.0, 0.0, random(360)); // Palmeiras
+        CreateDynamicObject(1344, -2662.0 + (i * 10), 1426.0, 7.0, 0.0, 0.0, float(random(360))); // Palmeiras
     }
-    Create3DTextLabel("🏖️ PRAIA DE COPACABANA\n{FFFFFF}Princesinha do Mar", COLOR_INFO, -2662.0, 1426.0, 10.0, 100.0, 0);
+    CreateDynamic3DTextLabel("🏖️ PRAIA DE COPACABANA\n{FFFFFF}Princesinha do Mar", COLOR_INFO, -2662.0, 1426.0, 10.0, 100.0);
     
     // === ESTÁDIO DO MARACANÃ ===
     CreateDynamicObject(8661, -1404.0, 1265.0, 25.0, 0.0, 0.0, 0.0);
-    Create3DTextLabel("⚽ ESTÁDIO DO MARACANÃ\n{FFFFFF}Templo do futebol", COLOR_INFO, -1404.0, 1265.0, 30.0, 100.0, 0);
+    CreateDynamic3DTextLabel("⚽ ESTÁDIO DO MARACANÃ\n{FFFFFF}Templo do futebol", COLOR_INFO, -1404.0, 1265.0, 30.0, 100.0);
     
     // === FAVELAS ===
     CreateFavelaRocinha();
@@ -251,16 +209,16 @@ stock CreateFavelaRocinha()
             new Float:casa_y = y + (j * 6.0) + random(2);
             new Float:casa_z = z + (random(3) * 3.0);
             
-            CreateDynamicObject(1408 + random(5), casa_x, casa_y, casa_z, 0.0, 0.0, random(360));
+            CreateDynamicObject(1408 + random(5), casa_x, casa_y, casa_z, 0.0, 0.0, float(random(360)));
         }
     }
     
     // UPP da Rocinha
     CreateDynamicObject(968, x - 10, y - 5, z, 0.0, 0.0, 0.0); // Barreira
-    Create3DTextLabel("🚔 UPP ROCINHA\n{FFFFFF}Unidade de Polícia Pacificadora", COLOR_BLUE, x - 10, y - 5, z + 2, 50.0, 0);
+    CreateDynamic3DTextLabel("🚔 UPP ROCINHA\n{FFFFFF}Unidade de Polícia Pacificadora", COLOR_BLUE, x - 10, y - 5, z + 2, 50.0);
     
     // Label principal
-    Create3DTextLabel("🏠 ROCINHA\n{FFFFFF}Maior favela do Brasil", COLOR_YELLOW, x, y, z + 5, 100.0, 0);
+    CreateDynamic3DTextLabel("🏠 ROCINHA\n{FFFFFF}Maior favela do Brasil", COLOR_YELLOW, x, y, z + 5, 100.0);
 }
 
 stock CreateFavelaAlemao()
@@ -283,12 +241,12 @@ stock CreateFavelaAlemao()
                 new Float:casa_y = y + (j * 5.0);
                 new Float:casa_z = z + (level * 4.0);
                 
-                CreateDynamicObject(1408 + random(5), casa_x, casa_y, casa_z, 0.0, 0.0, random(360));
+                CreateDynamicObject(1408 + random(5), casa_x, casa_y, casa_z, 0.0, 0.0, float(random(360)));
             }
         }
     }
     
-    Create3DTextLabel("🚡 COMPLEXO DO ALEMÃO\n{FFFFFF}Teleférico e UPP", COLOR_YELLOW, x, y, z + 5, 100.0, 0);
+    CreateDynamic3DTextLabel("🚡 COMPLEXO DO ALEMÃO\n{FFFFFF}Teleférico e UPP", COLOR_YELLOW, x, y, z + 5, 100.0);
 }
 
 stock CreateFavelaCidadeDeus()
@@ -309,7 +267,7 @@ stock CreateFavelaCidadeDeus()
         }
     }
     
-    Create3DTextLabel("🏘️ CIDADE DE DEUS\n{FFFFFF}Conjuntos habitacionais", COLOR_YELLOW, x + 50, y + 40, z + 5, 100.0, 0);
+    CreateDynamic3DTextLabel("🏘️ CIDADE DE DEUS\n{FFFFFF}Conjuntos habitacionais", COLOR_YELLOW, x + 50, y + 40, z + 5, 100.0);
 }
 
 stock CreateGovernmentBuildings()
@@ -317,17 +275,17 @@ stock CreateGovernmentBuildings()
     // === PREFEITURA ===
     CreateDynamicObject(3095, 1481.0, -1772.0, 18.8, 0.0, 0.0, 0.0);
     CreateDynamicPickup(1239, 1, 1481.0, -1772.0, 18.8);
-    Create3DTextLabel("🏛️ PREFEITURA DO RIO\n{FFFFFF}/entrar para acessar", COLOR_INFO, 1481.0, -1772.0, 20.0, 30.0, 0);
+    CreateDynamic3DTextLabel("🏛️ PREFEITURA DO RIO\n{FFFFFF}/entrar para acessar", COLOR_INFO, 1481.0, -1772.0, 20.0, 30.0);
     
     // === DETRAN ===
     CreateDynamicObject(3095, 1494.0, -1766.0, 18.8, 0.0, 0.0, 0.0);
     CreateDynamicPickup(1239, 1, 1494.0, -1766.0, 18.8);
-    Create3DTextLabel("🚗 DETRAN\n{FFFFFF}CNH, multas e veículos", COLOR_INFO, 1494.0, -1766.0, 20.0, 30.0, 0);
+    CreateDynamic3DTextLabel("🚗 DETRAN\n{FFFFFF}CNH, multas e veículos", COLOR_INFO, 1494.0, -1766.0, 20.0, 30.0);
     
     // === BANCO CENTRAL ===
     CreateDynamicObject(3095, 595.0, -1248.0, 18.0, 0.0, 0.0, 0.0);
     CreateDynamicPickup(1274, 1, 595.0, -1248.0, 18.0);
-    Create3DTextLabel("🏦 BANCO CENTRAL\n{FFFFFF}Serviços bancários", COLOR_GREEN, 595.0, -1248.0, 20.0, 30.0, 0);
+    CreateDynamic3DTextLabel("🏦 BANCO CENTRAL\n{FFFFFF}Serviços bancários", COLOR_GREEN, 595.0, -1248.0, 20.0, 30.0);
 }
 
 stock CreatePoliceStations()
@@ -335,17 +293,17 @@ stock CreatePoliceStations()
     // === DELEGACIA CENTRAL ===
     CreateDynamicObject(3095, 1555.0, -1675.0, 16.2, 0.0, 0.0, 0.0);
     CreateDynamicPickup(1247, 1, 1555.0, -1675.0, 16.2);
-    Create3DTextLabel("🚔 DELEGACIA CENTRAL\n{FFFFFF}Polícia Civil do RJ", COLOR_BLUE, 1555.0, -1675.0, 18.0, 30.0, 0);
+    CreateDynamic3DTextLabel("🚔 DELEGACIA CENTRAL\n{FFFFFF}Polícia Civil do RJ", COLOR_BLUE, 1555.0, -1675.0, 18.0, 30.0);
     
     // === QUARTEL DO BOPE ===
     CreateDynamicObject(3095, 2100.0, -1800.0, 13.5, 0.0, 0.0, 0.0);
     CreateDynamicObject(968, 2095.0, -1795.0, 13.5, 0.0, 0.0, 45.0); // Barreira
-    Create3DTextLabel("⚫ BOPE\n{FFFFFF}Batalhão de Operações Especiais", COLOR_RED, 2100.0, -1800.0, 15.0, 30.0, 0);
+    CreateDynamic3DTextLabel("⚫ BOPE\n{FFFFFF}Batalhão de Operações Especiais", COLOR_RED, 2100.0, -1800.0, 15.0, 30.0);
     
     // === HOSPITAL ===
     CreateDynamicObject(3095, 1607.0, -1890.0, 13.6, 0.0, 0.0, 0.0);
     CreateDynamicPickup(1240, 1, 1607.0, -1890.0, 13.6);
-    Create3DTextLabel("🏥 HOSPITAL MUNICIPAL\n{FFFFFF}Atendimento médico", COLOR_GREEN, 1607.0, -1890.0, 15.0, 30.0, 0);
+    CreateDynamic3DTextLabel("🏥 HOSPITAL MUNICIPAL\n{FFFFFF}Atendimento médico", COLOR_GREEN, 1607.0, -1890.0, 15.0, 30.0);
 }
 
 // ===============================================================================
@@ -356,7 +314,7 @@ stock ConnectToDatabase()
 {
     Database = mysql_connect("localhost", "root", "", "rjroleplay");
     
-    if(Database == MYSQL_INVALID_HANDLE)
+    if(Database == MySQL:0)
     {
         print("❌ ERRO: Falha ao conectar com MySQL!");
         return 0;
@@ -403,7 +361,7 @@ stock CheckPlayerAccount(playerid)
 forward OnPlayerAccountCheck(playerid);
 public OnPlayerAccountCheck(playerid)
 {
-    if(cache_num_rows())
+    if(cache_get_row_count())
     {
         ShowLoginDialog(playerid);
     }
@@ -423,7 +381,7 @@ stock ShowLoginDialog(playerid)
     strcat(string, "Digite sua senha para fazer login:\n\n");
     strcat(string, "{95E1D3}💡 {C0C0C0}Sua senha é criptografada e segura.");
     
-    MostrarSenha(playerid, "🔐 Login no Servidor", string, "Entrar", "Sair", "OnPlayerLogin");
+    ShowPlayerDialog(playerid, 1, DIALOG_STYLE_PASSWORD, "🔐 Login no Servidor", string, "Entrar", "Sair");
 }
 
 stock ShowRegisterDialog(playerid)
@@ -435,40 +393,67 @@ stock ShowRegisterDialog(playerid)
     strcat(string, "Crie uma senha para se registrar:\n\n");
     strcat(string, "{95E1D3}⚠️ {C0C0C0}Use uma senha forte (mínimo 6 caracteres)");
     
-    MostrarSenha(playerid, "📝 Registro no Servidor", string, "Registrar", "Sair", "OnPlayerRegister");
+    ShowPlayerDialog(playerid, 2, DIALOG_STYLE_PASSWORD, "📝 Registro no Servidor", string, "Registrar", "Sair");
 }
 
-forward OnPlayerLogin(playerid, response, listitem, inputtext[]);
-public OnPlayerLogin(playerid, response, listitem, inputtext[])
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 {
-    if(!response)
+    switch(dialogid)
     {
-        Kick(playerid);
-        return 1;
+        case 1: // Login
+        {
+            if(!response)
+            {
+                Kick(playerid);
+                return 1;
+            }
+            
+            if(strlen(inputtext) < 6)
+            {
+                SendClientMessage(playerid, COLOR_ERROR, "❌ Senha deve ter pelo menos 6 caracteres!");
+                ShowLoginDialog(playerid);
+                return 1;
+            }
+            
+            new query[256], password_hash[65];
+            SHA256_PassHash(inputtext, "rjrp_salt", password_hash, 65);
+            
+            mysql_format(Database, query, sizeof(query), 
+                "SELECT * FROM `accounts` WHERE `name` = '%e' AND `password` = '%e' LIMIT 1", 
+                PlayerData[playerid][pName], password_hash);
+            mysql_tquery(Database, query, "OnPlayerLoginCheck", "d", playerid);
+        }
+        case 2: // Register
+        {
+            if(!response)
+            {
+                Kick(playerid);
+                return 1;
+            }
+            
+            if(strlen(inputtext) < 6)
+            {
+                SendClientMessage(playerid, COLOR_ERROR, "❌ Senha deve ter pelo menos 6 caracteres!");
+                ShowRegisterDialog(playerid);
+                return 1;
+            }
+            
+            new query[512], password_hash[65];
+            SHA256_PassHash(inputtext, "rjrp_salt", password_hash, 65);
+            
+            mysql_format(Database, query, sizeof(query), 
+                "INSERT INTO `accounts` (`name`, `password`) VALUES ('%e', '%e')", 
+                PlayerData[playerid][pName], password_hash);
+            mysql_tquery(Database, query, "OnPlayerRegisterComplete", "d", playerid);
+        }
     }
-    
-    if(strlen(inputtext) < 6)
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "❌ Senha deve ter pelo menos 6 caracteres!");
-        ShowLoginDialog(playerid);
-        return 1;
-    }
-    
-    new query[256], password_hash[65];
-    SHA256_PassHash(inputtext, "rjrp_salt", password_hash, 65);
-    
-    mysql_format(Database, query, sizeof(query), 
-        "SELECT * FROM `accounts` WHERE `name` = '%e' AND `password` = '%e' LIMIT 1", 
-        PlayerData[playerid][pName], password_hash);
-    mysql_tquery(Database, query, "OnPlayerLoginCheck", "d", playerid);
-    
     return 1;
 }
 
 forward OnPlayerLoginCheck(playerid);
 public OnPlayerLoginCheck(playerid)
 {
-    if(cache_num_rows())
+    if(cache_get_row_count())
     {
         LoadPlayerData(playerid);
         PlayerData[playerid][pLogged] = 1;
@@ -481,33 +466,6 @@ public OnPlayerLoginCheck(playerid)
         SendClientMessage(playerid, COLOR_ERROR, "❌ Senha incorreta!");
         ShowLoginDialog(playerid);
     }
-    return 1;
-}
-
-forward OnPlayerRegister(playerid, response, listitem, inputtext[]);
-public OnPlayerRegister(playerid, response, listitem, inputtext[])
-{
-    if(!response)
-    {
-        Kick(playerid);
-        return 1;
-    }
-    
-    if(strlen(inputtext) < 6)
-    {
-        SendClientMessage(playerid, COLOR_ERROR, "❌ Senha deve ter pelo menos 6 caracteres!");
-        ShowRegisterDialog(playerid);
-        return 1;
-    }
-    
-    new query[512], password_hash[65];
-    SHA256_PassHash(inputtext, "rjrp_salt", password_hash, 65);
-    
-    mysql_format(Database, query, sizeof(query), 
-        "INSERT INTO `accounts` (`name`, `password`) VALUES ('%e', '%e')", 
-        PlayerData[playerid][pName], password_hash);
-    mysql_tquery(Database, query, "OnPlayerRegisterComplete", "d", playerid);
-    
     return 1;
 }
 
@@ -533,71 +491,98 @@ public OnPlayerRegisterComplete(playerid)
 // COMANDOS PRINCIPAIS
 // ===============================================================================
 
-CMD:ajuda(playerid, const params[])
-{
-    new string[1024];
-    
-    strcat(string, "{4ECDC4}═══════════════ 📋 AJUDA - RIO DE JANEIRO RP ═══════════════\n\n");
-    strcat(string, "{FFFFFF}🎮 {FFD93D}COMANDOS GERAIS:\n");
-    strcat(string, "{FFFFFF}/stats - Ver suas estatísticas\n");
-    strcat(string, "{FFFFFF}/tempo - Ver hora atual\n");
-    strcat(string, "{FFFFFF}/creditos - Créditos do servidor\n\n");
-    
-    strcat(string, "{FFFFFF}💰 {FFD93D}ECONOMIA:\n");
-    strcat(string, "{FFFFFF}/banco - Acessar conta bancária\n");
-    strcat(string, "{FFFFFF}/pagar [id] [valor] - Pagar em dinheiro\n\n");
-    
-    strcat(string, "{FFFFFF}📱 {FFD93D}ROLEPLAY:\n");
-    strcat(string, "{FFFFFF}/me [ação] - Ação de roleplay\n");
-    strcat(string, "{FFFFFF}/do [descrição] - Descrição RP\n\n");
-    
-    strcat(string, "{95E1D3}💡 Discord: discord.gg/rjroleplay");
-    
-    MostrarMensagem(playerid, "📋 Central de Ajuda", string);
-    return 1;
-}
+// ===============================================================================
+// SISTEMA DE COMANDOS (sem Pawn.CMD)
+// ===============================================================================
 
-CMD:stats(playerid, const params[])
+public OnPlayerCommandText(playerid, cmdtext[])
 {
-    new string[512];
+    if(!PlayerData[playerid][pLogged])
+    {
+        SendClientMessage(playerid, COLOR_ERROR, "❌ Você precisa estar logado!");
+        return 1;
+    }
     
-    format(string, sizeof(string), 
-        "{4ECDC4}📊 ESTATÍSTICAS DE %s\n\n\
-        {FFFFFF}💰 Dinheiro: {4ECDC4}R$ %d\n\
-        {FFFFFF}🏦 Banco: {4ECDC4}R$ %d\n\
-        {FFFFFF}📈 Nível: {4ECDC4}%d\n\
-        {FFFFFF}🍔 Fome: {4ECDC4}%d%%\n\
-        {FFFFFF}🥤 Sede: {4ECDC4}%d%%\n\
-        {FFFFFF}⚡ Energia: {4ECDC4}%d%%",
-        PlayerData[playerid][pName],
-        PlayerData[playerid][pMoney],
-        PlayerData[playerid][pBankMoney],
-        PlayerData[playerid][pLevel],
-        PlayerData[playerid][pHunger],
-        PlayerData[playerid][pThirst],
-        PlayerData[playerid][pEnergy]
-    );
+    // Comandos principais
+    if(!strcmp(cmdtext, "/ajuda", true))
+    {
+        new string[1024];
+        
+        strcat(string, "{4ECDC4}═══════════════ 📋 AJUDA - RIO DE JANEIRO RP ═══════════════\n\n");
+        strcat(string, "{FFFFFF}🎮 {FFD93D}COMANDOS GERAIS:\n");
+        strcat(string, "{FFFFFF}/stats - Ver suas estatísticas\n");
+        strcat(string, "{FFFFFF}/tempo - Ver hora atual\n");
+        strcat(string, "{FFFFFF}/creditos - Créditos do servidor\n\n");
+        
+        strcat(string, "{FFFFFF}💰 {FFD93D}ECONOMIA:\n");
+        strcat(string, "{FFFFFF}/banco - Acessar conta bancária\n");
+        strcat(string, "{FFFFFF}/pagar [id] [valor] - Pagar em dinheiro\n\n");
+        
+        strcat(string, "{FFFFFF}📱 {FFD93D}ROLEPLAY:\n");
+        strcat(string, "{FFFFFF}/me [ação] - Ação de roleplay\n");
+        strcat(string, "{FFFFFF}/do [descrição] - Descrição RP\n\n");
+        
+        strcat(string, "{95E1D3}💡 Discord: discord.gg/rjroleplay");
+        
+        ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "📋 Central de Ajuda", string, "OK", "");
+        return 1;
+    }
     
-    MostrarMensagem(playerid, "📊 Suas Estatísticas", string);
-    return 1;
-}
-
-CMD:me(playerid, const params[])
-{
-    if(strlen(params) < 3)
-        return PC_ShowUsage(playerid, "/me [ação]");
+    if(!strcmp(cmdtext, "/stats", true))
+    {
+        new string[512];
+        
+        format(string, sizeof(string), 
+            "{4ECDC4}📊 ESTATÍSTICAS DE %s\n\n\
+            {FFFFFF}💰 Dinheiro: {4ECDC4}R$ %d\n\
+            {FFFFFF}🏦 Banco: {4ECDC4}R$ %d\n\
+            {FFFFFF}📈 Nível: {4ECDC4}%d\n\
+            {FFFFFF}🍔 Fome: {4ECDC4}%d%%\n\
+            {FFFFFF}🥤 Sede: {4ECDC4}%d%%\n\
+            {FFFFFF}⚡ Energia: {4ECDC4}%d%%",
+            PlayerData[playerid][pName],
+            PlayerData[playerid][pMoney],
+            PlayerData[playerid][pBankMoney],
+            PlayerData[playerid][pLevel],
+            PlayerData[playerid][pHunger],
+            PlayerData[playerid][pThirst],
+            PlayerData[playerid][pEnergy]
+        );
+        
+        ShowPlayerDialog(playerid, 999, DIALOG_STYLE_MSGBOX, "📊 Suas Estatísticas", string, "OK", "");
+        return 1;
+    }
     
-    new string[128];
-    format(string, sizeof(string), "* %s %s", PlayerData[playerid][pName], params);
+    if(!strncmp(cmdtext, "/me ", 4))
+    {
+        new params[128];
+        format(params, sizeof(params), "%s", cmdtext[4]);
+        
+        if(strlen(params) < 3)
+        {
+            SendClientMessage(playerid, COLOR_ERROR, "Uso: /me [ação]");
+            return 1;
+        }
+        
+        new string[128];
+        format(string, sizeof(string), "* %s %s", PlayerData[playerid][pName], params);
+        
+        SendClientMessageInRange(30.0, playerid, 0xC2A2DAFF, string);
+        return 1;
+    }
     
-    SendClientMessageInRange(30.0, playerid, 0xC2A2DAFF, string);
+    // Comando não encontrado
+    SendClientMessage(playerid, COLOR_ERROR, "❌ Comando não encontrado. Use /ajuda");
     return 1;
 }
 
 CMD:do(playerid, const params[])
 {
     if(strlen(params) < 3)
-        return PC_ShowUsage(playerid, "/do [descrição]");
+    {
+        SendClientMessage(playerid, COLOR_ERROR, "Uso: /do [descrição]");
+        return 1;
+    }
     
     new string[128];
     format(string, sizeof(string), "* %s (( %s ))", params, PlayerData[playerid][pName]);
@@ -607,121 +592,58 @@ CMD:do(playerid, const params[])
 }
 
 // ===============================================================================
-// SISTEMA DE HUD
-// ===============================================================================
-
-stock CreatePlayerHUD(playerid)
-{
-    // Dinheiro
-    HUD_Money[playerid] = CreatePlayerTextDraw(playerid, 548.0, 380.0, "R$ 0");
-    PlayerTextDrawLetterSize(playerid, HUD_Money[playerid], 0.25, 1.2);
-    PlayerTextDrawColor(playerid, HUD_Money[playerid], COLOR_GREEN);
-    PlayerTextDrawSetShadow(playerid, HUD_Money[playerid], 1);
-    PlayerTextDrawFont(playerid, HUD_Money[playerid], 2);
-    PlayerTextDrawShow(playerid, HUD_Money[playerid]);
-    
-    // Status
-    HUD_Status[playerid] = CreatePlayerTextDraw(playerid, 548.0, 400.0, "Fome: 100%");
-    PlayerTextDrawLetterSize(playerid, HUD_Status[playerid], 0.20, 1.0);
-    PlayerTextDrawColor(playerid, HUD_Status[playerid], COLOR_YELLOW);
-    PlayerTextDrawSetShadow(playerid, HUD_Status[playerid], 1);
-    PlayerTextDrawFont(playerid, HUD_Status[playerid], 2);
-    PlayerTextDrawShow(playerid, HUD_Status[playerid]);
-    
-    return 1;
-}
-
-stock UpdatePlayerHUD(playerid)
-{
-    if(!PlayerData[playerid][pSpawned]) return 1;
-    
-    new string[64];
-    
-    // Atualizar dinheiro
-    format(string, sizeof(string), "R$ %d", PlayerData[playerid][pMoney]);
-    PlayerTextDrawSetString(playerid, HUD_Money[playerid], string);
-    
-    // Atualizar status
-    format(string, sizeof(string), "Fome:%d%% Sede:%d%% Energia:%d%%", 
-        PlayerData[playerid][pHunger], PlayerData[playerid][pThirst], PlayerData[playerid][pEnergy]);
-    PlayerTextDrawSetString(playerid, HUD_Status[playerid], string);
-    
-    return 1;
-}
-
-// ===============================================================================
-// TIMERS E ATUALIZAÇÕES
-// ===============================================================================
-
-forward ServerUpdate();
-public ServerUpdate()
-{
-    // Atualizar HUD de todos os players
-    for(new i = 0; i < MAX_PLAYERS; i++)
-    {
-        if(IsPlayerConnected(i) && PlayerData[i][pLogged])
-        {
-            UpdatePlayerHUD(i);
-        }
-    }
-    return 1;
-}
-
-forward PlayerUpdate();
-public PlayerUpdate()
-{
-    for(new i = 0; i < MAX_PLAYERS; i++)
-    {
-        if(IsPlayerConnected(i) && PlayerData[i][pLogged] && PlayerData[i][pSpawned])
-        {
-            // Reduzir fome, sede e energia gradualmente
-            if(PlayerData[i][pHunger] > 0) PlayerData[i][pHunger]--;
-            if(PlayerData[i][pThirst] > 0) PlayerData[i][pThirst]--;
-            if(PlayerData[i][pEnergy] > 0) PlayerData[i][pEnergy]--;
-            
-            // Verificar se precisa avisar sobre necessidades
-            if(PlayerData[i][pHunger] <= 20)
-                SendClientMessage(i, COLOR_ERROR, "🍔 Você está com fome! Procure comida.");
-            if(PlayerData[i][pThirst] <= 20)
-                SendClientMessage(i, COLOR_ERROR, "🥤 Você está com sede! Procure água.");
-            if(PlayerData[i][pEnergy] <= 20)
-                SendClientMessage(i, COLOR_ERROR, "💤 Você está cansado! Descanse um pouco.");
-        }
-    }
-    return 1;
-}
-
-// ===============================================================================
 // FUNÇÕES AUXILIARES
 // ===============================================================================
 
-stock SHA256_PassHash(const password[], const salt[], dest[], dest_size)
+stock SHA256_PassHash(const password[], const salt[], dest[], dest_len = sizeof(dest))
 {
-    // Simulação simples de hash para teste - use Whirlpool na produção
     new combined[128];
     format(combined, sizeof(combined), "%s%s", password, salt);
     
-    new hash = 0;
-    for(new i = 0; i < strlen(combined); i++)
+    new hash[65];
+    // Simulação de hash SHA256 - substituir por implementação real
+    format(hash, sizeof(hash), "sha256_%s_%s", password, salt);
+    format(dest, dest_len, "%s", hash);
+}
+
+stock LoadPlayerData(playerid)
+{
+    if(cache_get_row_count())
     {
-        hash = hash * 31 + combined[i];
+        PlayerData[playerid][pLevel] = cache_get_value_int(0, 3);
+        PlayerData[playerid][pMoney] = cache_get_value_int(0, 4);
+        PlayerData[playerid][pBankMoney] = cache_get_value_int(0, 5);
+        PlayerData[playerid][pHunger] = cache_get_value_int(0, 6);
+        PlayerData[playerid][pThirst] = cache_get_value_int(0, 7);
+        PlayerData[playerid][pEnergy] = cache_get_value_int(0, 8);
+        PlayerData[playerid][pPosX] = cache_get_value_float(0, 9);
+        PlayerData[playerid][pPosY] = cache_get_value_float(0, 10);
+        PlayerData[playerid][pPosZ] = cache_get_value_float(0, 11);
+        PlayerData[playerid][pPosA] = cache_get_value_float(0, 12);
     }
-    
-    format(dest, dest_size, "%x", hash);
-    return 1;
+}
+
+stock SavePlayerData(playerid)
+{
+    new query[512];
+    mysql_format(Database, query, sizeof(query),
+        "UPDATE `accounts` SET `money` = %d, `bank_money` = %d, `hunger` = %d, `thirst` = %d, `energy` = %d WHERE `name` = '%e'",
+        PlayerData[playerid][pMoney], PlayerData[playerid][pBankMoney], PlayerData[playerid][pHunger],
+        PlayerData[playerid][pThirst], PlayerData[playerid][pEnergy], PlayerData[playerid][pName]);
+    mysql_tquery(Database, query);
 }
 
 stock ResetPlayerData(playerid)
 {
     PlayerData[playerid][pLogged] = 0;
+    PlayerData[playerid][pSpawned] = 0;
     PlayerData[playerid][pLevel] = 1;
-    PlayerData[playerid][pMoney] = 5000;
+    PlayerData[playerid][pMoney] = 0;
     PlayerData[playerid][pBankMoney] = 0;
     PlayerData[playerid][pHunger] = 100;
     PlayerData[playerid][pThirst] = 100;
     PlayerData[playerid][pEnergy] = 100;
-    PlayerData[playerid][pSpawned] = 0;
-    return 1;
+    PlayerData[playerid][pAdmin] = 0;
 }
 
 stock SetupPlayerSpawn(playerid)
@@ -730,48 +652,14 @@ stock SetupPlayerSpawn(playerid)
     SetPlayerFacingAngle(playerid, 270.0);
     SetPlayerInterior(playerid, 0);
     SetPlayerVirtualWorld(playerid, 0);
-    SetPlayerSkin(playerid, 299);
-    
-    SendClientMessage(playerid, COLOR_SUCCESS, "🌟 Bem-vindo ao Rio de Janeiro! Use /ajuda para começar.");
-    return 1;
+    GivePlayerMoney(playerid, PlayerData[playerid][pMoney]);
 }
 
-stock LoadPlayerData(playerid)
+stock CreatePlayerHUD(playerid)
 {
-    PlayerData[playerid][pLevel] = cache_get_value_int(0, "level");
-    PlayerData[playerid][pMoney] = cache_get_value_int(0, "money");
-    PlayerData[playerid][pBankMoney] = cache_get_value_int(0, "bank_money");
-    PlayerData[playerid][pHunger] = cache_get_value_int(0, "hunger");
-    PlayerData[playerid][pThirst] = cache_get_value_int(0, "thirst");
-    PlayerData[playerid][pEnergy] = cache_get_value_int(0, "energy");
-    PlayerData[playerid][pPosX] = cache_get_value_float(0, "pos_x");
-    PlayerData[playerid][pPosY] = cache_get_value_float(0, "pos_y");
-    PlayerData[playerid][pPosZ] = cache_get_value_float(0, "pos_z");
-    PlayerData[playerid][pPosA] = cache_get_value_float(0, "pos_a");
-    return 1;
-}
-
-stock SavePlayerData(playerid)
-{
-    new query[512];
-    new Float:x, Float:y, Float:z, Float:a;
-    GetPlayerPos(playerid, x, y, z);
-    GetPlayerFacingAngle(playerid, a);
-    
-    mysql_format(Database, query, sizeof(query), 
-        "UPDATE `accounts` SET `level`=%d, `money`=%d, `bank_money`=%d, `hunger`=%d, `thirst`=%d, `energy`=%d, `pos_x`=%f, `pos_y`=%f, `pos_z`=%f, `pos_a`=%f WHERE `name`='%e'",
-        PlayerData[playerid][pLevel],
-        PlayerData[playerid][pMoney],
-        PlayerData[playerid][pBankMoney],
-        PlayerData[playerid][pHunger],
-        PlayerData[playerid][pThirst],
-        PlayerData[playerid][pEnergy],
-        x, y, z, a,
-        PlayerData[playerid][pName]
-    );
-    
-    mysql_tquery(Database, query);
-    return 1;
+    // HUD básico - será expandido conforme necessário
+    PlayerData[playerid][pHUD][0] = TextDrawCreate(10.0, 320.0, "~g~Rio de Janeiro RP");
+    TextDrawShowForPlayer(playerid, PlayerData[playerid][pHUD][0]);
 }
 
 stock SendClientMessageInRange(Float:range, playerid, color, const message[])
@@ -786,12 +674,31 @@ stock SendClientMessageInRange(Float:range, playerid, color, const message[])
             SendClientMessage(i, color, message);
         }
     }
-    return 1;
 }
 
 forward KickPlayer(playerid);
 public KickPlayer(playerid)
 {
     Kick(playerid);
-    return 1;
+}
+
+forward ServerUpdate();
+public ServerUpdate()
+{
+    // Timer do servidor - atualizações gerais
+}
+
+forward PlayerUpdate();  
+public PlayerUpdate()
+{
+    // Atualizar needs dos jogadores
+    for(new i = 0; i < MAX_PLAYERS; i++)
+    {
+        if(IsPlayerConnected(i) && PlayerData[i][pLogged])
+        {
+            if(PlayerData[i][pHunger] > 0) PlayerData[i][pHunger]--;
+            if(PlayerData[i][pThirst] > 0) PlayerData[i][pThirst]--;
+            if(PlayerData[i][pEnergy] > 0) PlayerData[i][pEnergy]--;
+        }
+    }
 }
